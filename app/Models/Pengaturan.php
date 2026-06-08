@@ -14,8 +14,12 @@ class Pengaturan extends Model
      */
     public static function dapatkan(string $kunci, mixed $default = null): mixed
     {
-        $item = static::where('kunci', $kunci)->first();
-        return $item ? $item->nilai : $default;
+        try {
+            $item = static::where('kunci', $kunci)->first();
+            return $item ? $item->nilai : $default;
+        } catch (\Illuminate\Database\QueryException $e) {
+            return $default;
+        }
     }
 
     /**
@@ -23,7 +27,11 @@ class Pengaturan extends Model
      */
     public static function atur(string $kunci, mixed $nilai): void
     {
-        static::updateOrCreate(['kunci' => $kunci], ['nilai' => $nilai]);
+        try {
+            static::updateOrCreate(['kunci' => $kunci], ['nilai' => $nilai]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Table doesn't exist yet — silently ignore
+        }
     }
 
     /**
@@ -31,6 +39,10 @@ class Pengaturan extends Model
      */
     public static function dapatkanBanyak(array $kuncis): array
     {
-        return static::whereIn('kunci', $kuncis)->pluck('nilai', 'kunci')->toArray();
+        try {
+            return static::whereIn('kunci', $kuncis)->pluck('nilai', 'kunci')->toArray();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return [];
+        }
     }
 }

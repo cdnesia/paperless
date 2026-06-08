@@ -25,7 +25,11 @@ class AppServiceProvider extends ServiceProvider
         Carbon::setLocale('id');
 
         // Dynamic app name from settings, fallback to config/app.php value
-        $appNama = Pengaturan::dapatkan('app_nama', config('app.name'));
-        config(['app.name' => $appNama]);
+        try {
+            $appNama = Pengaturan::dapatkan('app_nama', config('app.name'));
+            config(['app.name' => $appNama]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Table pengaturans belum ada — gunakan default dari config
+        }
     }
 }

@@ -97,12 +97,12 @@
                                 <td>{{ $suratKeluar->sent_at ? $suratKeluar->sent_at->translatedFormat('d F Y H:i:s') : '-' }}</td>
                             </tr>
                             <tr>
-                                <th>File Surat (PDF)</th>
+                                <th>File Surat</th>
                                 <td>
                                     @if ($suratKeluar->file_pdf)
                                         <a href="{{ $suratKeluar->pdfUrl() }}" target="_blank"
                                             rel="noopener">
-                                            <i class="fi fi-rr-file-pdf me-1"></i> Lihat Surat PDF
+                                            <i class="fi fi-rr-file-pdf me-1"></i> Lihat Surat
                                         </a>
                                     @else
                                         -
@@ -110,12 +110,12 @@
                                 </td>
                             </tr>
                             <tr>
-                                <th>Lampiran (PDF)</th>
+                                <th>Lampiran Surat</th>
                                 <td>
                                     @if ($suratKeluar->lampiran)
                                         <a href="{{ $suratKeluar->lampiranUrl() }}" target="_blank"
                                             rel="noopener">
-                                            <i class="fi fi-rr-file-pdf me-1"></i> Lihat Lampiran PDF
+                                            <i class="fi fi-rr-file-pdf me-1"></i> Lihat Lampiran
                                         </a>
                                     @else
                                         -
@@ -143,14 +143,17 @@
                         <h6 class="card-title mb-0">
                             <i class="fi fi-rr-share me-1"></i> Riwayat Disposisi
                         </h6>
-                        @if (!$pivotStatus)
+                        @php
+                            $aksiLocked = in_array($pivotStatus, ['diterima', 'ditolak']);
+                        @endphp
+                        @if (!$aksiLocked)
                             <button type="button" class="btn btn-white btn-sm btn-shadow waves-effect"
                                 data-bs-toggle="collapse" data-bs-target="#formDisposisi">
                                 <i class="fi fi-rr-add"></i> Aksi
                             </button>
                         @else
                             <span
-                                class="badge badge-sm bg-{{ $pivotStatus === 'diterima' ? 'success' : ($pivotStatus === 'ditolak' ? 'danger' : 'info') }} bg-opacity-10 text-dark">
+                                class="badge badge-sm bg-{{ $pivotStatus === 'diterima' ? 'success' : 'danger' }} bg-opacity-10 text-dark">
                                 {{ ucfirst($pivotStatus) }}
                             </span>
                         @endif
@@ -158,7 +161,7 @@
 
                     <div class="collapse" id="formDisposisi">
                         <div class="card-body border-bottom bg-light">
-                            @if (!$pivotStatus)
+                            @if (!$aksiLocked)
                                 <form action="{{ route('surat-masuk.update-status', $suratKeluar) }}" method="POST"
                                     id="formAksiSurat">
                                     @csrf
@@ -179,28 +182,26 @@
                                             placeholder="Pilih penerima disposisi">
                                         <small class="text-muted">Gunakan Ctrl/Cmd+klik untuk pilih banyak</small>
                                     </div>
-                                <div class="mb-2">
-                                    <label class="form-label small">Alasan / Keterangan</label>
-                                    <textarea name="alasan" class="form-control form-control-sm" rows="2"
-                                              placeholder="Alasan atau catatan (opsional)"></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-sm w-100" id="btnSubmitAksi">
-                                    <i class="fi fi-rr-share me-1"></i> Proses
-                                </button>
-                            </form>
-@else
-<div class="text-center py-2">
-                                    <span class="badge badge-sm bg-{{ $pivotStatus === 'diterima' ? 'success' : ($pivotStatus === 'ditolak' ? 'danger' : 'info') }} fs-6">
+                                    <div class="mb-2">
+                                        <label class="form-label small">Alasan / Keterangan</label>
+                                        <textarea name="alasan" class="form-control form-control-sm" rows="2"
+                                                  placeholder="Alasan atau catatan (opsional)"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm w-100" id="btnSubmitAksi">
+                                        <i class="fi fi-rr-share me-1"></i> Proses
+                                    </button>
+                                </form>
+                            @else
+                                <div class="text-center py-2">
+                                    <span class="badge badge-sm bg-{{ $pivotStatus === 'diterima' ? 'success' : 'danger' }} fs-6">
                                         @if ($pivotStatus === 'diterima')
-✓ Surat Diterima
-@elseif ($pivotStatus === 'ditolak')
-✗ Surat Ditolak
-@else
-↻ Surat Sudah Diteruskan
-@endif
+                                            ✓ Surat Diterima
+                                        @else
+                                            ✗ Surat Ditolak
+                                        @endif
                                     </span>
                                 </div>
-@endif
+                            @endif
                         </div>
                     </div>
 

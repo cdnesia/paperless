@@ -90,7 +90,7 @@
                                 <td>
                                     @if ($surat->file_pdf)
                                         <a href="{{ $surat->pdfUrl() }}" target="_blank" rel="noopener">
-                                            <i class="fi fi-rr-file-pdf me-1"></i> Lihat PDF
+                                            <i class="fi fi-rr-file-pdf me-1"></i> Lihat Surat
                                         </a>
                                     @elseif ($surat->google_doc_id)
                                         <a href="https://docs.google.com/document/d/{{ $surat->google_doc_id }}/edit"
@@ -106,9 +106,8 @@
                                 <th>Lampiran Surat</th>
                                 <td>
                                     @if ($surat->lampiran)
-                                        <span class="mx-1">|</span>
                                         <a href="{{ $surat->lampiranUrl() }}" target="_blank" rel="noopener">
-                                            <i class="fi fi-rr-file-pdf me-1"></i> Lampiran PDF
+                                            <i class="fi fi-rr-file-pdf me-1"></i> Lihat Lampiran
                                         </a>
                                     @else
                                         -

@@ -189,21 +189,19 @@ class DisposisiController extends Controller
      */
 
     /**
-     * List outgoing dispositions - default: unread only, ?semua=1 to show all
+     * List outgoing dispositions — tampilkan semua (tidak filter belum dibaca).
      */
     public function index(Request $request)
     {
         $user = auth()->user();
-        $semua = $request->boolean('semua');
         
         $disposisi = Disposisi::where('surat_keluar_id', '!=', null)
             ->where('pengirim_id', $user->id)
-            ->when(!$semua, fn($q) => $q->where('dibaca', false))
             ->with(['suratKeluar', 'pengguna'])
             ->latest()
             ->get();
             
-        return view('disposisi.index', compact('disposisi', 'semua'));
+        return view('disposisi.index', compact('disposisi'));
     }
 
     /**

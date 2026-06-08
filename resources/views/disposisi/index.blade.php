@@ -8,14 +8,6 @@
                     <div class="card-header d-flex gap-3 flex-wrap align-items-center justify-content-between border-0 pb-2">
                         <h6 class="card-title mb-0">Disposisi Keluar</h6>
                         <div class="d-flex gap-2 flex-wrap align-items-center">
-                            <div class="form-check form-switch me-2">
-                                <input class="form-check-input" type="checkbox" id="toggleSemua"
-                                    {{ $semua ? 'checked' : '' }}>
-                                <label class="form-check-label small" for="toggleSemua">
-                                    Tampilkan yang sudah dibaca
-                                </label>
-                            </div>
-
                             <div id="dt_DisposisiKeluar_Search"></div>
 
                             <button type="button" class="btn btn-outline-secondary btn-sm" id="resetFilter"
@@ -67,7 +59,7 @@
                                         </td>
                                         <td>{{ Str::limit($item->keterangan, 40) ?? '-' }}</td>
                                         <td>
-                                            <span class="badge bg-{{ $item->status === 'diterima' || $item->status === 'selesai' ? 'success' : ($item->status === 'ditolak' ? 'danger' : 'info') }}">
+                                            <span class="badge badge-sm bg-{{ $item->status === 'diterima' || $item->status === 'selesai' ? 'success' : ($item->status === 'ditolak' ? 'danger' : 'info') }}">
                                                 {{ ucfirst($item->status) }}
                                             </span>
                                         </td>
@@ -210,16 +202,5 @@
         });
 
         $('#resetFilter').click(function() { clearFilters(); });
-
-        // Toggle tampilkan semua / hanya belum dibaca
-        document.getElementById('toggleSemua')?.addEventListener('change', function() {
-            const url = new URL(window.location.href);
-            if (this.checked) {
-                url.searchParams.set('semua', '1');
-            } else {
-                url.searchParams.delete('semua');
-            }
-            window.location.href = url.toString();
-        });
     </script>
 @endpush

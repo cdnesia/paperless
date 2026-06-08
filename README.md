@@ -1,276 +1,232 @@
-# E-OFFICE SYSTEM REFACTOR PLAN
+# E-OFFICE
 
-## KONSEP YANG DIPERBARUI
-
-### 1. SURAT MASUK (Incoming Letters)
-**Definisi**: Surat yang diterima dari luar/pengirim eksternal
-- User membuka: lihat detail surat masuk (tanpa riwayat)
-- Bisa didisposisikan ke user lain → menjadi **DISPOSISI MASUK**
-- Simple model, tidak perlu tracking kompleks
-- Mark as read/unread hanya untuk knowledge
-
-**Database**: `surat_masuks` table (UUID PK)
-- `nomor_surat`, `perihal`, `pengirim`, `tanggal_diterima`, `google_docs_url`, `dibaca`, `timestamps`
-- No relationships ke surat_keluar_penerima
+Sistem manajemen surat-menyurat digital berbasis web untuk **Universitas Muhammadiyah Jambi**. Mendukung pembuatan, pengiriman, disposisi, dan verifikasi surat keluar — dengan tanda tangan digital dan notifikasi Telegram.
 
 ---
 
-### 2. DISPOSISI MASUK (Received Dispositions)  
-**Definisi**: Surat Masuk yang DITERUSKAN kepada user lain
-- User menerima disposisi dari rekan
-- Menampilkan: surat masuk original + info disposisi (pengirim, keterangan)
-- Bisa lanjut teruskan ke user lain → chain disposisi
-- Mark as read/unread tracking untuk disposisi
+## 🛠️ Teknologi
 
-**Database**: `disposisis` table (UUID PK)
-- `surat_masuk_id` (nullable - bisa null untuk disposisi keluar)
-- `pengguna_id` (penerima disposisi)
-- `pengirim_id` (siapa yg teruskan)
-- `keterangan`, `status` (diteruskan/diterima/ditolak), `dibaca`, `timestamps`
-
-**Routes**:
-- `/disposisi-masuk/belum-dibaca` - list unread dispositions received
-- `/disposisi-masuk/sudah-dibaca` - list read dispositions received
-- `/disposisi-masuk/{disposisi}` - show detail disposisi masuk
-- POST `/disposisi-masuk/{disposisi}/teruskan` - forward disposisi to another user
-- PATCH `/disposisi-masuk/{disposisi}/mark-as-read` - mark read
+| Layer | Teknologi |
+|---|---|
+| Framework | Laravel 13 |
+| PHP | ^8.3 |
+| Database | MariaDB / MySQL |
+| Auth | Session-based + Spatie Permission (RBAC) |
+| Frontend | Blade + Bootstrap 5 + jQuery + Select2 + Tagify |
+| QR Code | simplesoftwareio/simple-qrcode |
+| PDF | barryvdh/laravel-dompdf + setasign/fpdi |
+| Google Docs | google/apiclient |
+| Telegram | Custom notification service |
 
 ---
 
-### 3. SURAT KELUAR (Outgoing Letters) - TETAP
-**Definisi**: Surat dibuat oleh user, dikirim ke penerima
-- Complex workflow: draft → review → approved → sent → archived
-- Dual-mode: upload PDF atau Google Docs
-- Multi-recipient tracking via pivot table
-- **IMPORTANT**: History timeline TETAP ditampilkan (creation, approval, sending, revisions)
-- Status history & audit trail PENTING untuk accountability
+## 📦 Instalasi
 
-**Timeline kept**: surat_keluar_histories table
-
----
-
-### 4. DISPOSISI KELUAR (OPTIONAL - skipped now)
-**Note**: Tidak disertakan dalam fase 1 refactor. Fokus pada Masuk dulu.
-
----
-
-## PERUBAHAN TEKNIS
-
-### A. MODELS
-1. **SuratMasuk**: Keep as is (simple model)
-2. **Disposisi**: 
-   - Add relation: `suratMasuk()` BelongsTo SuratMasuk
-   - Add method: `isMasuk()` check if surat_masuk_id not null
-3. **SuratKeluar**: Keep as is (complex, dengan history)
-
-### B. CONTROLLERS
-
-#### SuratMasukController
-- `index()`, `belumDibaca()`, `sudahDibaca()` - **REMOVE** suratKeluarDiterima queries
-- `show()` - **REMOVE** disposisi card display, hanya tampilkan surat masuk
-- **DELETE** methods: `showSuratKeluar()`, `markAsReadSuratKeluar()`, `markAsUnreadSuratKeluar()`, `disposisiSuratKeluar()`
-- ADD method: `disposisi(Request $r, SuratMasuk $sm)` - create disposisi masuk
-
-#### DisposisiController (REFACTORED)
-- **SEPARATE CONCERNS**:
-  - `index()` - disposisi keluar only
-  - `belumDibaca()` - disposisi keluar unread
-  - `sudahDibaca()` - disposisi keluar read
-  
-- **ADD disposisi masuk methods**:
-  - `masukBelumDibaca()` - disposisi masuk unread (received by me)
-  - `masukSudahDibaca()` - disposisi masuk read  
-  - `showMasuk(Disposisi $d)` - view disposisi masuk detail
-  - `teruskanMasuk(Request $r, Disposisi $d)` - forward disposisi masuk
-
-#### SuratKeluarController
-- Keep all methods (no change)
-- History timeline TETAP ditampilkan di show()
-
-### C. MIGRATIONS
-**Consolidate into one clean file**: `2026_05_24_150000_create_e_office_tables.php`
-
-Remove these fragmented files:
-- `2026_05_24_070152_create_surat_keluars_table.php`
-- `2026_05_24_070152_create_surat_masuks_table.php`  
-- `2026_05_24_090104_create_surat_keluar_histories_table.php`
-- `2026_05_24_131627_create_disposisis_table.php`
-- `2026_05_24_133858_create_surat_keluar_penerima_table.php`
-- `2026_05_24_140000_change_disposisis_id_to_uuid.php`
-
-**New structure** (in single file):
-```
-surat_masuks
-├─ id (UUID)
-├─ nomor_surat (unique)
-├─ perihal
-├─ pengirim
-├─ tanggal_diterima
-├─ google_docs_url
-├─ dibaca (boolean)
-└─ timestamps
-
-surat_keluars
-├─ id (UUID)
-├─ user_id → users.id
-├─ nomor_surat (unique)
-├─ perihal
-├─ jenis_surat (enum: internal, eksternal, broadcast)
-├─ metode_surat (enum: upload, gdocs)
-├─ status (enum: draft, review, approved, sent, archived)
-├─ tanggal_surat
-├─ file_pdf
-├─ google_doc_id
-├─ lampiran
-├─ dibaca
-├─ sent_at
-└─ timestamps
-
-surat_keluar_histories
-├─ id (UUID)
-├─ surat_keluar_id → surat_keluars.id (FK, cascade)
-├─ user_id → users.id (FK, cascade)
-├─ action (string)
-├─ keterangan
-├─ data (JSON)
-└─ timestamps
-
-surat_keluar_penerima (pivot)
-├─ id (auto_increment) - keep for pivot
-├─ surat_keluar_id → surat_keluars.id (FK, cascade)
-├─ user_id → users.id (FK, cascade)
-├─ dibaca (boolean)
-├─ dibaca_at
-└─ timestamps
-
-disposisis
-├─ id (UUID)
-├─ surat_masuk_id → surat_masuks.id (FK, nullable, cascade) 
-├─ surat_keluar_id → surat_keluars.id (FK, nullable, cascade)
-├─ pengguna_id → users.id (FK, no action)
-├─ pengirim_id → users.id (FK, nullable, set null)
-├─ keterangan (text, nullable)
-├─ status (enum: diteruskan, diterima, ditolak, default: diteruskan)
-├─ dibaca (boolean, default: false)
-└─ timestamps
+```bash
+git clone <repo-url>
+cd E-OFFICE
+composer install
+cp .env.example .env
+# sesuaikan DB_USERNAME, DB_PASSWORD, dll di .env
+php artisan key:generate
+php artisan migrate:fresh --seed
+php artisan storage:link
+npm install && npm run build
+php artisan serve
 ```
 
-### D. VIEWS
+Login default: `superadmin@eoffice.test` / `password`
 
-#### KEEP/UPDATE
-- `surat-masuk/index.blade.php` - remove surat keluar masuk section
-- `surat-masuk/show.blade.php` - **REMOVE timeline**, show only surat masuk data
-- `surat-masuk/belum-dibaca.blade.php` - remove surat keluar
-- `surat-masuk/sudah-dibaca.blade.php` - remove surat keluar  
-- `surat-keluar/*` - KEEP ALL (tetap kompleks dengan history)
+---
 
-#### DELETE
-- `surat-masuk/show-surat-keluar.blade.php` - NO MORE (konsep changed)
+## 🔐 Role & Permission (RBAC)
 
-#### CREATE (Disposisi Masuk)
-- `disposisi/masuk/belum-dibaca.blade.php`
-- `disposisi/masuk/sudah-dibaca.blade.php`
-- `disposisi/masuk/show.blade.php` - with forward form
-- `disposisi/keluar/belum-dibaca.blade.php` (optional)
-- `disposisi/keluar/sudah-dibaca.blade.php` (optional)
+Sistem menggunakan **Spatie Permission** dengan middleware `route.permission` yang otomatis mengecek permission berdasarkan nama route.
 
-### E. ROUTES
+| Role | Akses |
+|---|---|
+| **Super Admin** | Full access — semua menu termasuk Pengaturan, Role, Permission, dan Migrasi |
+| **Rektor / Wakil Rektor** | Dashboard, Surat Keluar, Surat Masuk, Disposisi, Tanda Tangan Digital |
+| **Dekan** | Dashboard, Surat Keluar (baca & disposisi), Surat Masuk, Disposisi, TTD |
+| **Kaprodi / Ketua / Kepala** | Dashboard, Surat Keluar (baca & disposisi), Surat Masuk, Disposisi |
+| **Sekretaris** | Dashboard, Surat Keluar (CRUD + kirim), Surat Masuk, Disposisi, TTD |
+| **Staff** | Dashboard, Surat Masuk, Disposisi Masuk |
+| **User Biasa** | Dashboard, Surat Masuk, Disposisi Masuk (minimal) |
 
-**REMOVE from `/surat-masuk` prefix**:
-- GET `/surat-masuk/surat-keluar-dari/{suratKeluar}` → showSuratKeluar
-- POST `/surat-masuk/surat-keluar-dari/{suratKeluar}/disposisi` → disposisiSuratKeluar  
-- PATCH `/surat-masuk/surat-keluar-dari/{suratKeluar}/mark-as-read` → markAsReadSuratKeluar
-- PATCH `/surat-masuk/surat-keluar-dari/{suratKeluar}/mark-as-unread` → markAsUnreadSuratKeluar
+---
 
-**ADD to `/surat-masuk` prefix**:
-- POST `/surat-masuk/{suratMasuk}/disposisi` → disposisi (create disposisi masuk)
+## 📊 Alur Kerja
 
-**ADD under new `/disposisi-masuk` prefix**:
-- GET `/disposisi-masuk/belum-dibaca` → masukBelumDibaca
-- GET `/disposisi-masuk/sudah-dibaca` → masukSudahDibaca
-- GET `/disposisi-masuk/{disposisi}` → showMasuk
-- POST `/disposisi-masuk/{disposisi}/teruskan` → teruskanMasuk
-- PATCH `/disposisi-masuk/{disposisi}/mark-as-read` → markAsReadMasuk
-- PATCH `/disposisi-masuk/{disposisi}/mark-as-unread` → markAsUnreadMasuk
-
-### F. SIDEBAR MENU
-
-**RESTRUCTURE**:
+### 1. Surat Keluar
 ```
-Surat Keluar (route: surat-keluar.index)
-Surat Masuk (route: surat-masuk.index)
-Disposisi Surat
-├─ Disposisi Masuk (route: disposisi-masuk.belum-dibaca)
-├─ Disposisi Keluar (route: disposisi.belum-dibaca) [optional]
+Buat Surat → Draft → [Edit/Finalisasi] → Kirim → Penerima dapat notifikasi
+                                                        ↓
+                                               Tanda Tangan Digital
+                                                        ↓
+                                               Verifikasi via QR Code
+```
+
+### 2. Alur Disposisi
+```
+Surat Masuk (penerima)
+    ↓
+Klik "Aksi" → Disposisikan / Teruskan → pilih penerima lanjutan
+    ↓
+Penerima lanjutan dapat di Disposisi Masuk
+    ↓
+Bisa lanjut Terima / Tolak / Teruskan lagi
+```
+
+### 3. Tanda Tangan Digital
+```
+PDF Surat → Hash SHA256 → Generate QR Code → PDF final (stamped)
+    ↓
+QR Code bisa dipindai → halaman verifikasi publik
+    ↓
+Cek hash original vs sekarang → valid/tidak
 ```
 
 ---
 
-## IMPLEMENTATION PRIORITY
+## 📁 Struktur Direktori
 
-1. **Phase 1: Database** (This PR)
-   - Create consolidated migration file
-   - Run migration cleanup
-   
-2. **Phase 2: Backend** 
-   - Update controllers
-   - Update models
-   - Update routes
+```
+app/
+├── Http/
+│   ├── Controllers/
+│   │   ├── AuthController.php
+│   │   ├── DashboardController.php
+│   │   ├── DisposisiController.php
+│   │   ├── FileController.php
+│   │   ├── MigrationController.php
+│   │   ├── PengaturanController.php
+│   │   ├── PermissionController.php
+│   │   ├── ProfileController.php
+│   │   ├── RoleController.php
+│   │   ├── SuratKeluarController.php
+│   │   ├── SuratMasukController.php
+│   │   ├── TandaTanganDigitalController.php
+│   │   ├── UnitKerjaController.php
+│   │   └── UserController.php
+│   └── Middleware/
+│       └── CheckRoutePermission.php   # Otomatis cek permission via route name
+├── Models/
+│   ├── Disposisi.php
+│   ├── LoginHistory.php
+│   ├── PenerimaSurat.php
+│   ├── Pengaturan.php
+│   ├── SuratKeluar.php
+│   ├── SuratKeluarHistory.php
+│   ├── TandaTanganDigital.php
+│   ├── UnitKerja.php
+│   └── User.php
+├── Services/
+│   ├── ApiService.php
+│   ├── GoogleDocsService.php
+│   └── TelegramNotificationService.php
+└── Traits/
+    └── ApiResponse.php
 
-3. **Phase 3: Frontend**
-   - Update surat-masuk views
-   - Create disposisi-masuk views
-   - Update sidebar
-
-4. **Phase 4: Testing**
-   - Test all workflows
-   - Test permissions
-   - Verify clean separation
+database/
+├── migrations/     # Semua migrasi
+└── seeders/
+    ├── DatabaseSeeder.php
+    ├── RoleSeeder.php      # Semua role & permission
+    └── UserSeeder.php      # Super Admin default
+```
 
 ---
 
-## INDUSTRY STANDARDS APPLIED
+## 🔗 Routes Utama
 
-✅ **Single Responsibility**: SuratMasuk ≠ Disposisi Masuk ≠ Surat Keluar  
-✅ **Consolidated Migrations**: No fragmented files (cleaner git history)  
-✅ **Separation of Concerns**: Controllers handle their domain only  
-✅ **UUID for PK**: Consistent across all tables  
-✅ **Audit Trail**: History kept where needed (SuratKeluar)  
-✅ **Nullable FKs**: Disposisi can link masuk OR keluar (not both)  
-✅ **Clear Status Enums**: No ambiguous values  
-✅ **Meaningful Relationships**: Every FK has purpose  
+| Prefix | Nama Route | Keterangan |
+|---|---|---|
+| `/surat-keluar` | `surat-keluar.*` | CRUD surat keluar + kirim + history + disposisi |
+| `/surat-masuk` | `surat-masuk.*` | Inbox surat dari penerima + aksi Terima/Tolak/Teruskan |
+| `/disposisi` | `disposisi.*` | Disposisi keluar (yang dikirim user) |
+| `/disposisi-masuk` | `disposisi-masuk.*` | Disposisi masuk (yang diterima user) + teruskan |
+| `/tanda-tangan-digital` | `tanda-tangan-digital.*` | Tanda tangan + verifikasi publik |
+| `/roles` | `roles.*` | Manajemen role (super-admin only) |
+| `/permissions` | `permissions.*` | Manajemen permission + sync otomatis |
+| `/users` | `users.*` | Manajemen user |
+| `/unit-kerja` | `unit-kerja.*` | Unit kerja |
+| `/pengaturan` | `pengaturan.*` | Pengaturan sistem + Telegram |
+| `/migration` | `migration.*` | Migrasi data dari DB lama (super-admin only) |
+| `/files/{path}` | `files.serve` | Serve file dari storage (publik) |
 
 ---
 
-## ROLLBACK PLAN (if needed)
+## 🪝 Middleware Permission
 
-Since we're consolidating migrations, no rollback needed after cleanup. Previous files are historical.
-Just keep git history.
+Route-level permission check otomatis oleh `CheckRoutePermission`:
+
+- Setiap nama route dicek sebagai permission di Spatie
+- **Super Admin** selalu bypass
+- Route yang dikecualikan: `login`, `logout`, `dashboard`, `profile.*`, `tanda-tangan-digital.verify`
+- Jika user tidak punya permission → **403 Forbidden**
 
 ---
 
-## FILES TO BE MODIFIED/CREATED
+## 📱 Notifikasi Telegram
 
-**Delete** (old migrations):
-- 2026_05_24_070152_create_surat_keluars_table.php
-- 2026_05_24_070152_create_surat_masuks_table.php
-- 2026_05_24_090104_create_surat_keluar_histories_table.php
-- 2026_05_24_131627_create_disposisis_table.php
-- 2026_05_24_133858_create_surat_keluar_penerima_table.php
-- 2026_05_24_140000_change_disposisis_id_to_uuid.php
-- resources/views/surat-masuk/show-surat-keluar.blade.php
+Sistem mengirim notifikasi otomatis ke Telegram saat:
+- Surat dikirim ke penerima
+- Disposisi masuk diteruskan
 
-**Create** (new):
-- 2026_05_24_150000_create_e_office_tables.php (consolidated)
-- resources/views/disposisi/masuk/belum-dibaca.blade.php
-- resources/views/disposisi/masuk/sudah-dibaca.blade.php
-- resources/views/disposisi/masuk/show.blade.php
+Konfigurasi di halaman **Pengaturan → Sistem**:
+- `telegram_bot_token` — Bot token dari @BotFather
+- `telegram_notif_surat_masuk` — Aktifkan notifikasi surat masuk
+- `telegram_tpl_surat_masuk` — Template pesan
+- `telegram_notif_disposisi_masuk` — Aktifkan notifikasi disposisi masuk
+- `telegram_tpl_disposisi_masuk` — Template pesan
 
-**Update**:
-- app/Http/Controllers/SuratMasukController.php
-- app/Http/Controllers/DisposisiController.php
-- app/Models/Disposisi.php
-- routes/web.php
-- resources/views/surat-masuk/*.blade.php
-- resources/views/layouts/partials/sidebar.blade.php
+User harus punya `telegram_chat_id` di profil.
+
+---
+
+## 📄 Google Docs Integration
+
+Saat membuat surat keluar dengan metode **Google Docs**:
+1. Sistem copy template dari Google Drive
+2. Replace placeholder `{nomor_surat}`, `{perihal}`, `{tanggal_surat}`
+3. User bisa edit di Google Docs
+4. Saat final → export ke PDF, simpan di storage, hapus dari Drive
+
+---
+
+## ✅ Fitur
+
+- [x] Surat keluar (upload PDF / Google Docs)
+- [x] Multi-penerima surat keluar
+- [x] Disposisi berantai (teruskan → teruskan → terima/tolak)
+- [x] Tanda tangan digital + QR code
+- [x] Verifikasi keaslian via QR scan (publik)
+- [x] Role-based access control (6 role)
+- [x] Permission otomatis dari route name
+- [x] Notifikasi Telegram
+- [x] Audit trail surat keluar
+- [x] File serve dengan fallback "File Tidak Tersedia"
+- [x] Migrasi data dari sistem lama
+- [x] Tagify dropdown untuk pilih penerima disposisi
+
+---
+
+## 🔧 Pengembangan
+
+```bash
+# Format code
+./vendor/bin/pint
+
+# Run test
+php artisan test
+
+# Sync permission dari routes
+php artisan permissions:sync   # atau via halaman /permissions
+```
+
+---
+
+<div align="center">
+  <sub>© 2026 ICT CENTER — Universitas Muhammadiyah Jambi</sub>
+</div>
 

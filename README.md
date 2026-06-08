@@ -1,154 +1,276 @@
-# PMB (Penerimaan Mahasiswa Baru) - {{ config('app.name') }}
+# E-OFFICE SYSTEM REFACTOR PLAN
 
-Sistem Informasi Penerimaan Mahasiswa Baru berbasis web dengan Laravel 11.
+## KONSEP YANG DIPERBARUI
 
-## Fitur
+### 1. SURAT MASUK (Incoming Letters)
+**Definisi**: Surat yang diterima dari luar/pengirim eksternal
+- User membuka: lihat detail surat masuk (tanpa riwayat)
+- Bisa didisposisikan ke user lain → menjadi **DISPOSISI MASUK**
+- Simple model, tidak perlu tracking kompleks
+- Mark as read/unread hanya untuk knowledge
 
-### Frontend
-- ✅ Halaman Beranda dengan hero section, statistik, program studi, dan berita terbaru
-- ✅ Halaman Profil Kampus (Visi & Misi)
-- ✅ Halaman Program Studi dengan detail
-- ✅ Halaman Berita dengan kategori dan pencarian
-- ✅ Halaman Jadwal PMB
-- ✅ Halaman Biaya Kuliah
-- ✅ Halaman FAQ
-- ✅ Halaman Kontak
-- ✅ Halaman Statis (dinamis)
-- ✅ Desain modern dengan Bootstrap 5, AOS animations
-- ✅ Responsive mobile-friendly
+**Database**: `surat_masuks` table (UUID PK)
+- `nomor_surat`, `perihal`, `pengirim`, `tanggal_diterima`, `google_docs_url`, `dibaca`, `timestamps`
+- No relationships ke surat_keluar_penerima
 
-### Admin Panel
-- ✅ Dashboard dengan statistik
-- ✅ Manajemen Menu (multi-level)
-- ✅ Manajemen Kategori Berita
-- ✅ Manajemen Berita (dengan upload thumbnail)
-- ✅ Manajemen Program Studi (dengan upload icon & thumbnail)
-- ✅ Manajemen Jadwal PMB
-- ✅ Manajemen Halaman Statis
-- ✅ Manajemen Admin
-- ✅ Dark theme dengan Bootstrap 5
-- ✅ DataTables & Select2 integration
+---
 
-## Persyaratan
+### 2. DISPOSISI MASUK (Received Dispositions)  
+**Definisi**: Surat Masuk yang DITERUSKAN kepada user lain
+- User menerima disposisi dari rekan
+- Menampilkan: surat masuk original + info disposisi (pengirim, keterangan)
+- Bisa lanjut teruskan ke user lain → chain disposisi
+- Mark as read/unread tracking untuk disposisi
 
-- PHP 8.1+
-- Composer
-- MySQL/MariaDB
-- Node.js & NPM (untuk asset compilation)
+**Database**: `disposisis` table (UUID PK)
+- `surat_masuk_id` (nullable - bisa null untuk disposisi keluar)
+- `pengguna_id` (penerima disposisi)
+- `pengirim_id` (siapa yg teruskan)
+- `keterangan`, `status` (diteruskan/diterima/ditolak), `dibaca`, `timestamps`
 
-## Instalasi
+**Routes**:
+- `/disposisi-masuk/belum-dibaca` - list unread dispositions received
+- `/disposisi-masuk/sudah-dibaca` - list read dispositions received
+- `/disposisi-masuk/{disposisi}` - show detail disposisi masuk
+- POST `/disposisi-masuk/{disposisi}/teruskan` - forward disposisi to another user
+- PATCH `/disposisi-masuk/{disposisi}/mark-as-read` - mark read
 
-1. Clone repository:
-```bash
-git clone https://github.com/yourusername/penmaru.git
-cd penmaru
+---
+
+### 3. SURAT KELUAR (Outgoing Letters) - TETAP
+**Definisi**: Surat dibuat oleh user, dikirim ke penerima
+- Complex workflow: draft → review → approved → sent → archived
+- Dual-mode: upload PDF atau Google Docs
+- Multi-recipient tracking via pivot table
+- **IMPORTANT**: History timeline TETAP ditampilkan (creation, approval, sending, revisions)
+- Status history & audit trail PENTING untuk accountability
+
+**Timeline kept**: surat_keluar_histories table
+
+---
+
+### 4. DISPOSISI KELUAR (OPTIONAL - skipped now)
+**Note**: Tidak disertakan dalam fase 1 refactor. Fokus pada Masuk dulu.
+
+---
+
+## PERUBAHAN TEKNIS
+
+### A. MODELS
+1. **SuratMasuk**: Keep as is (simple model)
+2. **Disposisi**: 
+   - Add relation: `suratMasuk()` BelongsTo SuratMasuk
+   - Add method: `isMasuk()` check if surat_masuk_id not null
+3. **SuratKeluar**: Keep as is (complex, dengan history)
+
+### B. CONTROLLERS
+
+#### SuratMasukController
+- `index()`, `belumDibaca()`, `sudahDibaca()` - **REMOVE** suratKeluarDiterima queries
+- `show()` - **REMOVE** disposisi card display, hanya tampilkan surat masuk
+- **DELETE** methods: `showSuratKeluar()`, `markAsReadSuratKeluar()`, `markAsUnreadSuratKeluar()`, `disposisiSuratKeluar()`
+- ADD method: `disposisi(Request $r, SuratMasuk $sm)` - create disposisi masuk
+
+#### DisposisiController (REFACTORED)
+- **SEPARATE CONCERNS**:
+  - `index()` - disposisi keluar only
+  - `belumDibaca()` - disposisi keluar unread
+  - `sudahDibaca()` - disposisi keluar read
+  
+- **ADD disposisi masuk methods**:
+  - `masukBelumDibaca()` - disposisi masuk unread (received by me)
+  - `masukSudahDibaca()` - disposisi masuk read  
+  - `showMasuk(Disposisi $d)` - view disposisi masuk detail
+  - `teruskanMasuk(Request $r, Disposisi $d)` - forward disposisi masuk
+
+#### SuratKeluarController
+- Keep all methods (no change)
+- History timeline TETAP ditampilkan di show()
+
+### C. MIGRATIONS
+**Consolidate into one clean file**: `2026_05_24_150000_create_e_office_tables.php`
+
+Remove these fragmented files:
+- `2026_05_24_070152_create_surat_keluars_table.php`
+- `2026_05_24_070152_create_surat_masuks_table.php`  
+- `2026_05_24_090104_create_surat_keluar_histories_table.php`
+- `2026_05_24_131627_create_disposisis_table.php`
+- `2026_05_24_133858_create_surat_keluar_penerima_table.php`
+- `2026_05_24_140000_change_disposisis_id_to_uuid.php`
+
+**New structure** (in single file):
+```
+surat_masuks
+├─ id (UUID)
+├─ nomor_surat (unique)
+├─ perihal
+├─ pengirim
+├─ tanggal_diterima
+├─ google_docs_url
+├─ dibaca (boolean)
+└─ timestamps
+
+surat_keluars
+├─ id (UUID)
+├─ user_id → users.id
+├─ nomor_surat (unique)
+├─ perihal
+├─ jenis_surat (enum: internal, eksternal, broadcast)
+├─ metode_surat (enum: upload, gdocs)
+├─ status (enum: draft, review, approved, sent, archived)
+├─ tanggal_surat
+├─ file_pdf
+├─ google_doc_id
+├─ lampiran
+├─ dibaca
+├─ sent_at
+└─ timestamps
+
+surat_keluar_histories
+├─ id (UUID)
+├─ surat_keluar_id → surat_keluars.id (FK, cascade)
+├─ user_id → users.id (FK, cascade)
+├─ action (string)
+├─ keterangan
+├─ data (JSON)
+└─ timestamps
+
+surat_keluar_penerima (pivot)
+├─ id (auto_increment) - keep for pivot
+├─ surat_keluar_id → surat_keluars.id (FK, cascade)
+├─ user_id → users.id (FK, cascade)
+├─ dibaca (boolean)
+├─ dibaca_at
+└─ timestamps
+
+disposisis
+├─ id (UUID)
+├─ surat_masuk_id → surat_masuks.id (FK, nullable, cascade) 
+├─ surat_keluar_id → surat_keluars.id (FK, nullable, cascade)
+├─ pengguna_id → users.id (FK, no action)
+├─ pengirim_id → users.id (FK, nullable, set null)
+├─ keterangan (text, nullable)
+├─ status (enum: diteruskan, diterima, ditolak, default: diteruskan)
+├─ dibaca (boolean, default: false)
+└─ timestamps
 ```
 
-2. Install dependencies:
-```bash
-composer install
-npm install
+### D. VIEWS
+
+#### KEEP/UPDATE
+- `surat-masuk/index.blade.php` - remove surat keluar masuk section
+- `surat-masuk/show.blade.php` - **REMOVE timeline**, show only surat masuk data
+- `surat-masuk/belum-dibaca.blade.php` - remove surat keluar
+- `surat-masuk/sudah-dibaca.blade.php` - remove surat keluar  
+- `surat-keluar/*` - KEEP ALL (tetap kompleks dengan history)
+
+#### DELETE
+- `surat-masuk/show-surat-keluar.blade.php` - NO MORE (konsep changed)
+
+#### CREATE (Disposisi Masuk)
+- `disposisi/masuk/belum-dibaca.blade.php`
+- `disposisi/masuk/sudah-dibaca.blade.php`
+- `disposisi/masuk/show.blade.php` - with forward form
+- `disposisi/keluar/belum-dibaca.blade.php` (optional)
+- `disposisi/keluar/sudah-dibaca.blade.php` (optional)
+
+### E. ROUTES
+
+**REMOVE from `/surat-masuk` prefix**:
+- GET `/surat-masuk/surat-keluar-dari/{suratKeluar}` → showSuratKeluar
+- POST `/surat-masuk/surat-keluar-dari/{suratKeluar}/disposisi` → disposisiSuratKeluar  
+- PATCH `/surat-masuk/surat-keluar-dari/{suratKeluar}/mark-as-read` → markAsReadSuratKeluar
+- PATCH `/surat-masuk/surat-keluar-dari/{suratKeluar}/mark-as-unread` → markAsUnreadSuratKeluar
+
+**ADD to `/surat-masuk` prefix**:
+- POST `/surat-masuk/{suratMasuk}/disposisi` → disposisi (create disposisi masuk)
+
+**ADD under new `/disposisi-masuk` prefix**:
+- GET `/disposisi-masuk/belum-dibaca` → masukBelumDibaca
+- GET `/disposisi-masuk/sudah-dibaca` → masukSudahDibaca
+- GET `/disposisi-masuk/{disposisi}` → showMasuk
+- POST `/disposisi-masuk/{disposisi}/teruskan` → teruskanMasuk
+- PATCH `/disposisi-masuk/{disposisi}/mark-as-read` → markAsReadMasuk
+- PATCH `/disposisi-masuk/{disposisi}/mark-as-unread` → markAsUnreadMasuk
+
+### F. SIDEBAR MENU
+
+**RESTRUCTURE**:
+```
+Surat Keluar (route: surat-keluar.index)
+Surat Masuk (route: surat-masuk.index)
+Disposisi Surat
+├─ Disposisi Masuk (route: disposisi-masuk.belum-dibaca)
+├─ Disposisi Keluar (route: disposisi.belum-dibaca) [optional]
 ```
 
-3. Copy environment:
-```bash
-cp .env.example .env
-```
+---
 
-4. Generate key:
-```bash
-php artisan key:generate
-```
+## IMPLEMENTATION PRIORITY
 
-5. Konfigurasi database di `.env`:
-```
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=penmaru
-DB_USERNAME=root
-DB_PASSWORD=
-```
+1. **Phase 1: Database** (This PR)
+   - Create consolidated migration file
+   - Run migration cleanup
+   
+2. **Phase 2: Backend** 
+   - Update controllers
+   - Update models
+   - Update routes
 
-6. Jalankan migrasi dan seeder:
-```bash
-php artisan migrate --seed
-```
+3. **Phase 3: Frontend**
+   - Update surat-masuk views
+   - Create disposisi-masuk views
+   - Update sidebar
 
-7. Buat storage link:
-```bash
-php artisan storage:link
-```
+4. **Phase 4: Testing**
+   - Test all workflows
+   - Test permissions
+   - Verify clean separation
 
-8. Jalankan development server:
-```bash
-php artisan serve
-```
+---
 
-## Login Default
+## INDUSTRY STANDARDS APPLIED
 
-### Admin Panel
-- URL: `http://localhost:8000/admin/login`
-- Email: `admin@example.com`
-- Password: `password`
+✅ **Single Responsibility**: SuratMasuk ≠ Disposisi Masuk ≠ Surat Keluar  
+✅ **Consolidated Migrations**: No fragmented files (cleaner git history)  
+✅ **Separation of Concerns**: Controllers handle their domain only  
+✅ **UUID for PK**: Consistent across all tables  
+✅ **Audit Trail**: History kept where needed (SuratKeluar)  
+✅ **Nullable FKs**: Disposisi can link masuk OR keluar (not both)  
+✅ **Clear Status Enums**: No ambiguous values  
+✅ **Meaningful Relationships**: Every FK has purpose  
 
-### Frontend User
-- URL: `http://localhost:8000/login`
-- Email: `admin@penmaru.com`
-- Password: `password`
+---
 
-## Struktur Direktori
+## ROLLBACK PLAN (if needed)
 
-```
-app/
-├── Http/
-│   ├── Controllers/
-│   │   ├── Admin/          # Admin controllers
-│   │   ├── AuthController.php
-│   │   ├── BeritaController.php
-│   │   ├── FrontendController.php
-│   │   └── ...
-│   └── Middleware/
-│       └── AdminAuth.php
-├── Models/
-│   ├── Admin.php
-│   ├── Berita.php
-│   ├── HalamanStatis.php
-│   ├── JadwalPMB.php
-│   ├── KategoriBerita.php
-│   ├── Menu.php
-│   └── ProgramStudi.php
-resources/views/
-├── admin/                   # Admin panel views
-│   ├── layouts/
-│   ├── auth/
-│   ├── dashboard.blade.php
-│   ├── menu/
-│   ├── kategori-berita/
-│   ├── berita/
-│   ├── program-studi/
-│   ├── jadwal-pmb/
-│   ├── halaman-statis/
-│   └── admin/
-├── frontend/                # Frontend views
-│   ├── layouts/
-│   ├── home.blade.php
-│   ├── profil.blade.php
-│   ├── program-studi.blade.php
-│   ├── program-studi-detail.blade.php
-│   ├── jadwal.blade.php
-│   ├── biaya.blade.php
-│   ├── faq.blade.php
-│   ├── kontak.blade.php
-│   ├── halaman.blade.php
-│   └── berita/
-└── auth/
-    └── login.blade.php
-database/
-├── migrations/              # 7 migration files
-└── seeders/
-    └── DatabaseSeeder.php
-routes/
-└── web.php
-```
-# paperless
+Since we're consolidating migrations, no rollback needed after cleanup. Previous files are historical.
+Just keep git history.
+
+---
+
+## FILES TO BE MODIFIED/CREATED
+
+**Delete** (old migrations):
+- 2026_05_24_070152_create_surat_keluars_table.php
+- 2026_05_24_070152_create_surat_masuks_table.php
+- 2026_05_24_090104_create_surat_keluar_histories_table.php
+- 2026_05_24_131627_create_disposisis_table.php
+- 2026_05_24_133858_create_surat_keluar_penerima_table.php
+- 2026_05_24_140000_change_disposisis_id_to_uuid.php
+- resources/views/surat-masuk/show-surat-keluar.blade.php
+
+**Create** (new):
+- 2026_05_24_150000_create_e_office_tables.php (consolidated)
+- resources/views/disposisi/masuk/belum-dibaca.blade.php
+- resources/views/disposisi/masuk/sudah-dibaca.blade.php
+- resources/views/disposisi/masuk/show.blade.php
+
+**Update**:
+- app/Http/Controllers/SuratMasukController.php
+- app/Http/Controllers/DisposisiController.php
+- app/Models/Disposisi.php
+- routes/web.php
+- resources/views/surat-masuk/*.blade.php
+- resources/views/layouts/partials/sidebar.blade.php
+

@@ -86,7 +86,7 @@ class SuratMasukController extends Controller
         $suratKeluar->load('user', 'histories.user');
 
         $users = User::select('id', 'name', 'email')
-            ->where('id', '!=', auth()->id())
+            ->whereNotIn('id', [1, auth()->id()])
             ->get()->map(function ($u) {
             return [
                 'value'  => $u->id,

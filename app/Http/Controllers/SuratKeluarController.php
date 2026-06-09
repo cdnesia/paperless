@@ -30,7 +30,7 @@ class SuratKeluarController extends Controller
     {
         $metode = request('metode', 'upload');
         $users = User::select('id', 'name', 'email')
-            ->where('id', '!=', auth()->id())
+            ->whereNotIn('id', [1, auth()->id()])
             ->get()->map(function ($user) {
             return [
                 'value' => $user->id,
@@ -190,7 +190,7 @@ class SuratKeluarController extends Controller
         $view = $suratKeluar->google_doc_id ? 'surat-keluar.edit-gdocs' : 'surat-keluar.edit';
 
         $users = User::select('id', 'name', 'email')
-            ->where('id', '!=', auth()->id())
+            ->whereNotIn('id', [1, auth()->id()])
             ->get()->map(function ($user) {
             return [
                 'value' => $user->id,

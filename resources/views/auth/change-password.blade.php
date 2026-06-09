@@ -34,10 +34,8 @@
                     <div class="card card-body p-4 p-sm-5 maxw-450px m-auto rounded-4 auth-card" data-simplebar>
                         <div class="mb-4 text-center">
                             <a href="/" aria-label="{{ config('app.name') }} logo">
-                                <img class="visible-light" src="{{ asset('assets/images/logo-full.svg') }}"
-                                    alt="{{ config('app.name') }} logo">
-                                <img class="visible-dark" src="{{ asset('assets/images/logo-full-white.svg') }}"
-                                    alt="{{ config('app.name') }} logo">
+                                <img class="visible-light" src="{{ asset('assets/images/logo-full.png') }}"
+                                    alt="{{ config('app.name') }} logo" style="max-width: 200px">
                             </a>
                         </div>
                         <div class="text-center mb-4">

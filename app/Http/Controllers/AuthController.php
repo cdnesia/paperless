@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\LoginHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Cache\RateLimiter;
 
 class AuthController extends Controller
@@ -73,5 +74,37 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
         
         return redirect('/login');
+    }
+
+    /**
+     * Tampilkan form ganti password wajib.
+     */
+    public function showChangePassword()
+    {
+        return view('auth.change-password');
+    }
+
+    /**
+     * Proses ganti password.
+     */
+    public function updatePassword(Request $request)
+    {
+        $user = auth()->user();
+
+        $validated = $request->validate([
+            'password'     => ['required', 'min:8', 'confirmed'],
+            'password_old' => ['required', function ($attribute, $value, $fail) use ($user) {
+                if (!Hash::check($value, $user->password)) {
+                    $fail('Password lama tidak cocok.');
+                }
+            }],
+        ]);
+
+        $user->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        return redirect()->intended('/dashboard')
+            ->with('success', 'Password berhasil diganti. Selamat bekerja!');
     }
 }

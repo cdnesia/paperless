@@ -21,7 +21,13 @@ Route::get('/', function () {
 Route::get('/login', [AuthController::class, 'index'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
-Route::middleware(['auth', 'route.permission'])->group(function () {
+// Ganti password wajib — diluar route.permission + password.force
+Route::middleware(['auth'])->group(function () {
+    Route::get('/password/change', [AuthController::class, 'showChangePassword'])->name('password.change');
+    Route::post('/password/update', [AuthController::class, 'updatePassword'])->name('password.update');
+});
+
+Route::middleware(['auth', 'route.permission', 'password.force'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::prefix('surat-masuk')->name('surat-masuk.')->group(function () {

@@ -13,7 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
         $middleware->alias([
-            'route.permission' => \App\Http\Middleware\CheckRoutePermission::class,
+            'route.permission'  => \App\Http\Middleware\CheckRoutePermission::class,
+            'password.force'    => \App\Http\Middleware\ForcePasswordChange::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

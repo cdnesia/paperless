@@ -195,7 +195,16 @@
                     } else if (xhr.status === 500) {
                         msg = 'Terjadi kesalahan server (500). Silakan coba lagi.';
                     } else if (xhr.status === 404) {
-                        msg = 'Data tidak ditemukan (404).';
+                        // Data sudah tidak ada — hapus baris dari tabel
+                        const id = modalEl.querySelector('.modal-item-id').value;
+                        const $row = $('.btn-hapus[data-id="' + id + '"]').closest('tr');
+                        if ($row.length && $.fn.DataTable.isDataTable($row.closest('table'))) {
+                            $row.closest('table').DataTable().row($row).remove().draw();
+                        } else {
+                            $row.fadeOut(300, () => $row.remove());
+                        }
+                        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                        showToast('warning', 'Data sudah dihapus sebelumnya.');
                     } else if (xhr.status === 403) {
                         msg = 'Anda tidak memiliki izin untuk menghapus data ini.';
                     }

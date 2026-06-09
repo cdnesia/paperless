@@ -58,7 +58,7 @@ class DisposisiController extends Controller
             abort(403);
         }
 
-        // Mark as read
+        // Auto-mark as read saat dibuka
         if (!$disposisi->dibaca) {
             $disposisi->update(['dibaca' => true]);
         }
@@ -179,7 +179,7 @@ class DisposisiController extends Controller
         }
 
         $disposisi->update(['dibaca' => false]);
-        return back()->with('success', 'Disposisi ditandai belum dibaca');
+        return redirect()->route('disposisi-masuk.index')->with('success', 'Disposisi ditandai belum dibaca');
     }
 
     /**
@@ -216,6 +216,7 @@ class DisposisiController extends Controller
             abort(403);
         }
 
+        // Auto-mark as read saat dibuka
         if (!$disposisi->dibaca) {
             $disposisi->update(['dibaca' => true]);
         }

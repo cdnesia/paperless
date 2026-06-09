@@ -193,6 +193,7 @@
                                 </thead>
                                 <tbody class="small align-middle">
                                     @foreach ($suratKeluar->penerima as $p)
+                                        @php $s = $p->pivot->status; @endphp
                                         <tr>
                                             <td class="fw-semibold">{{ $p->name }}</td>
                                             <td class="text-center">
@@ -203,7 +204,6 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                @php $s = $p->pivot->status; @endphp
                                                 @if ($s)
                                                     <span class="badge badge-sm {{ match($s) { 'diterima' => 'bg-success', 'ditolak' => 'bg-danger', 'diteruskan' => 'bg-info', default => 'bg-secondary' } }}">
                                                         {{ match($s) { 'diterima' => 'Diterima', 'ditolak' => 'Ditolak', 'diteruskan' => 'Diteruskan', default => $s } }}
@@ -213,7 +213,18 @@
                                                 @endif
                                             </td>
                                             <td class="text-muted">{{ $p->pivot->dibaca_at ? \Carbon\Carbon::parse($p->pivot->dibaca_at)->translatedFormat('d M H:i') : '-' }}</td>
-                                            <td class="text-muted">{{ $p->pivot->alasan ? \Illuminate\Support\Str::limit($p->pivot->alasan, 50) : '-' }}</td>
+                                            <td>
+                                                @if (in_array($s, ['diterima', 'ditolak']) && $p->pivot->alasan)
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm btn-lihat-alasan"
+                                                        data-nama="{{ $p->name }}"
+                                                        data-status="{{ match($s) { 'diterima' => 'Diterima', 'ditolak' => 'Ditolak' } }}"
+                                                        data-alasan="{{ $p->pivot->alasan }}">
+                                                        <i class="fi fi-rr-eye me-1"></i> Lihat
+                                                    </button>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -243,6 +254,7 @@
                                 @endphp
                                 @if ($disposisis->count() > 0)
                                     @foreach ($disposisis as $disposisi)
+                                        @php $isInvolved = auth()->user()->hasRole('super-admin') || $disposisi->pengirim_id === auth()->id() || $disposisi->pengguna_id === auth()->id(); @endphp
                                         <div class="d-flex align-items-start mb-3 pb-2 border-bottom">
                                             <div class="flex-shrink-0">
                                                 <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
@@ -263,10 +275,10 @@
                                                     <i class="fi fi-rr-calendar me-1"></i>
                                                     {{ $disposisi->created_at->translatedFormat('d F Y H:i') }}
                                                 </div>
-                                                @if ($disposisi->keterangan)
+                                                @if ($isInvolved && $disposisi->keterangan)
                                                     <p class="mb-0 small text-muted">{{ $disposisi->keterangan }}</p>
                                                 @endif
-                                                @if ($disposisi->alasan)
+                                                @if ($isInvolved && $disposisi->alasan)
                                                     <p class="mb-0 small fst-italic text-muted">
                                                         <i class="fi fi-rr-quote-right me-1"></i>{{ $disposisi->alasan }}
                                                     </p>
@@ -413,6 +425,30 @@ $colors = [
             </div>
         </div>
     </div>
+
+    {{-- Modal Lihat Alasan --}}
+    <div class="modal fade" id="modalAlasanPenerima" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h6 class="modal-title">
+                        <i class="fi fi-rr-comment-alt me-1"></i>
+                        Alasan <span id="modalAlasanStatus" class="badge badge-sm ms-1"></span>
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-2">Penerima: <strong id="modalAlasanNama"></strong></p>
+                    <div class="p-3 bg-light rounded">
+                        <p class="mb-0" id="modalAlasanTeks" style="white-space:pre-wrap;"></p>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('js')
@@ -439,6 +475,24 @@ $colors = [
             if ($formKirimShow) {
                 $formKirimShow.submit();
             }
+        });
+
+        // Modal lihat alasan penerima
+        $(document).on('click', '.btn-lihat-alasan', function() {
+            var nama    = $(this).data('nama');
+            var status  = $(this).data('status');
+            var alasan  = $(this).data('alasan');
+
+            $('#modalAlasanNama').text(nama);
+            $('#modalAlasanTeks').text(alasan);
+
+            var $statusBadge = $('#modalAlasanStatus');
+            $statusBadge.text(status);
+            $statusBadge
+                .removeClass('bg-success bg-danger')
+                .addClass(status === 'Diterima' ? 'bg-success' : 'bg-danger');
+
+            $('#modalAlasanPenerima').modal('show');
         });
     </script>
 @endpush

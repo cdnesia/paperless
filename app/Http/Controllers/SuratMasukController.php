@@ -122,7 +122,7 @@ class SuratMasukController extends Controller
             'dibaca' => false,
             'dibaca_at' => null,
         ]);
-        return back()->with('success', 'Surat ditandai sebagai belum dibaca');
+        return redirect()->route('surat-masuk.index')->with('success', 'Surat ditandai sebagai belum dibaca');
     }
 
     /**

@@ -211,6 +211,7 @@
                         @endphp
                         @if ($disposisis->count() > 0)
 @foreach ($disposisis as $disposisi)
+@php $isInvolved = auth()->user()->hasRole('super-admin') || $disposisi->pengirim_id === auth()->id() || $disposisi->pengguna_id === auth()->id(); @endphp
 <div class="d-flex align-items-start mb-3 pb-2 border-bottom">
                                     <div class="shrink-0">
                                         <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
@@ -232,10 +233,10 @@
                                         <span class="badge badge-sm bg-{{ $disposisi->status === 'selesai' || $disposisi->status === 'diterima' ? 'success' : ($disposisi->status === 'ditolak' ? 'danger' : 'info') }} mb-1">
                                             {{ ucfirst($disposisi->status) }}
                                         </span>
-                                        @if ($disposisi->keterangan)
+                                        @if ($isInvolved && $disposisi->keterangan)
 <p class="mb-0 small text-muted">{{ $disposisi->keterangan }}</p>
 @endif
-                                        @if ($disposisi->alasan)
+                                        @if ($isInvolved && $disposisi->alasan)
 <p class="mb-0 small fst-italic text-muted">
                                                 <i class="fi fi-rr-quote-right me-1"></i>{{ $disposisi->alasan }}
                                             </p>

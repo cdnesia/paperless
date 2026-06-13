@@ -71,7 +71,8 @@
 
                                 <div class="row g-2">
                                     <div class="col-6">
-                                        <label for="nomor_surat" class="form-label small fw-semibold">No. Surat</label>
+                                        <label for="nomor_surat" class="form-label small fw-semibold">Nomor Surat <span
+                                            class="text-danger">*</span></label>
                                         <input type="text"
                                             class="form-control form-control-sm @error('nomor_surat') is-invalid @enderror"
                                             id="nomor_surat" name="nomor_surat"

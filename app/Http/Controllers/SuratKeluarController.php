@@ -15,6 +15,45 @@ use Illuminate\Support\Facades\Storage;
 
 class SuratKeluarController extends Controller
 {
+    /**
+     * Periksa error pada file upload dan kembalikan array pesan error yang readable.
+     */
+    protected function validateUploadErrors(Request $request): array
+    {
+        $errors = [];
+        $fields = ['file_pdf', 'lampiran'];
+
+        foreach ($fields as $field) {
+            // Jangan pakai hasFile() karena return false saat file error upload
+            $file = $request->file($field);
+
+            if (!$file) {
+                continue;
+            }
+
+            $errorCode = $file->getError();
+
+            if ($errorCode === UPLOAD_ERR_OK) {
+                continue;
+            }
+
+            $label = $field === 'file_pdf' ? 'Dokumen Surat (PDF)' : 'Lampiran';
+
+            $errors[$field] = match ($errorCode) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE =>
+                    "{$label} terlalu besar. Maksimal ukuran file adalah 10 MB.",
+                UPLOAD_ERR_PARTIAL =>
+                    "{$label} hanya terunggah sebagian. Silakan coba lagi.",
+                UPLOAD_ERR_NO_FILE =>
+                    "{$label} tidak ditemukan. Silakan pilih file terlebih dahulu.",
+                default =>
+                    "{$label} gagal diunggah (kode error: {$errorCode}). Silakan coba lagi.",
+            };
+        }
+
+        return $errors;
+    }
+
     public function index()
     {
         $user = Auth::guard('web')->user();
@@ -72,7 +111,20 @@ class SuratKeluarController extends Controller
             $rules['google_doc_id'] = 'nullable';
         }
 
-        $validated = $request->validate($rules);
+        // Cek error upload (file terlalu besar, dll) sebelum validasi
+        $uploadErrors = $this->validateUploadErrors($request);
+        if (!empty($uploadErrors)) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors($uploadErrors);
+        }
+
+        $validated = $request->validate($rules, [
+            'file_pdf.max' => 'Ukuran file PDF maksimal 10 MB.',
+            'lampiran.max' => 'Ukuran file lampiran maksimal 10 MB.',
+            'file_pdf.mimes' => 'Dokumen surat harus berformat PDF.',
+            'lampiran.mimes' => 'Lampiran harus berformat PDF.',
+        ]);
 
         if ($request->hasFile('file_pdf')) {
             $validated['file_pdf'] = $request->file('file_pdf')->store('surat-keluar/pdf', 'public');
@@ -228,6 +280,14 @@ class SuratKeluarController extends Controller
         ];
 
         // Always use existing metode_surat, cannot be changed via form
+        // Cek error upload (file terlalu besar, dll) sebelum validasi
+        $uploadErrors = $this->validateUploadErrors($request);
+        if (!empty($uploadErrors)) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors($uploadErrors);
+        }
+
         $validated = $request->validate($rules);
         $validated['metode_surat'] = $suratKeluar->metode_surat;
 
@@ -240,7 +300,12 @@ class SuratKeluarController extends Controller
             $rules['google_doc_id'] = 'nullable';
         }
 
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, [
+            'file_pdf.max' => 'Ukuran file PDF maksimal 10 MB.',
+            'lampiran.max' => 'Ukuran file lampiran maksimal 10 MB.',
+            'file_pdf.mimes' => 'Dokumen surat harus berformat PDF.',
+            'lampiran.mimes' => 'Lampiran harus berformat PDF.',
+        ]);
 
         // Track what changed
         $changes = [];

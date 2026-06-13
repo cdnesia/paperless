@@ -220,9 +220,14 @@ class SuratKeluarController extends Controller
 
     public function show(SuratKeluar $suratKeluar)
     {
+        $user = Auth::guard('web')->user();
+
         if (!$suratKeluar->dibaca) {
             $suratKeluar->update(['dibaca' => true]);
-            $suratKeluar->logHistory('read', 'Surat dibaca oleh ' . Auth::guard('web')->user()->name);
+
+            if (!$user->hasRole('super-admin')) {
+                $suratKeluar->logHistory('read', 'Surat dibaca oleh ' . $user->name);
+            }
         }
 
         $suratKeluar->load(['histories.user', 'penerima']);
@@ -546,14 +551,20 @@ class SuratKeluarController extends Controller
     public function markAsRead(SuratKeluar $suratKeluar)
     {
         $suratKeluar->update(['dibaca' => true]);
-        $suratKeluar->logHistory('read', 'Ditandai sudah dibaca oleh ' . auth()->user()->name);
+
+        if (!auth()->user()->hasRole('super-admin')) {
+            $suratKeluar->logHistory('read', 'Ditandai sudah dibaca oleh ' . auth()->user()->name);
+        }
         return back()->with('success', 'Surat ditandai sebagai sudah dibaca');
     }
 
     public function markAsUnread(SuratKeluar $suratKeluar)
     {
         $suratKeluar->update(['dibaca' => false]);
-        $suratKeluar->logHistory('unread', 'Ditandai belum dibaca oleh ' . auth()->user()->name);
+
+        if (!auth()->user()->hasRole('super-admin')) {
+            $suratKeluar->logHistory('unread', 'Ditandai belum dibaca oleh ' . auth()->user()->name);
+        }
         return back()->with('success', 'Surat ditandai sebagai belum dibaca');
     }
 

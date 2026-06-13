@@ -59,7 +59,7 @@ class SuratKeluarController extends Controller
         $user = Auth::guard('web')->user();
         $suratKeluars = SuratKeluar::query()
             ->with('penerima')
-            ->when(!$user->hasRole('superadmin'), function ($q) use ($user) {
+            ->when(!$user->hasRole('super-admin'), function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })->get();
         return view('surat-keluar.index', compact('suratKeluars'));

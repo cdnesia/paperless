@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SuratMasukController;
 use App\Http\Controllers\SuratKeluarController;
 use App\Http\Controllers\DisposisiController;
+use App\Http\Controllers\KeycloakController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\UserController;
@@ -20,6 +21,9 @@ Route::get('/', function () {
 
 Route::get('/login', [AuthController::class, 'index'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+
+Route::get('/auth/login', [KeycloakController::class, 'login'])->name('auth.login');
+Route::get('/auth/callback', [KeycloakController::class, 'callback'])->name('auth.callback');
 
 // Ganti password wajib — diluar route.permission + password.force
 Route::middleware(['auth'])->group(function () {

@@ -10,10 +10,12 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "google/apiclient": "^2.19",
         "laravel/framework": "^13.7",
+        "laravel/socialite": "^5.28",
         "laravel/tinker": "^3.0",
         "setasign/fpdi": "^2.6",
         "setasign/fpdi-fpdf": "^2.3",
         "simplesoftwareio/simple-qrcode": "^4.2",
+        "socialiteproviders/keycloak": "^5.3",
         "spatie/laravel-permission": "^7.4"
     },
     "require-dev": {

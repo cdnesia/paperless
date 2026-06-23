@@ -65,7 +65,8 @@
                             <div class="alert text-bg-warning alert-dismissible fade show d-flex align-items-start"
                                 role="alert" id="countdownAlert">
                                 <ul class="mb-0 ps-3">
-                                    <li id="countdownMessage">Terlalu banyak percobaan login. Coba lagi dalam <strong id="countdownSeconds">{{ session('retryAfter') }}</strong> detik.</li>
+                                    <li id="countdownMessage">Terlalu banyak percobaan login. Coba lagi dalam <strong
+                                            id="countdownSeconds">{{ session('retryAfter') }}</strong> detik.</li>
                                 </ul>
                                 <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="alert"
                                     aria-label="Close"></button>
@@ -100,6 +101,23 @@
                             <div class="mb-3">
                                 <button type="submit" value="Submit"
                                     class="btn btn-primary waves-effect waves-light w-100">Login</button>
+                            </div>
+                            <div class="col-12">
+                                <div class="position-relative my-3">
+                                    <hr>
+                                    <p class="position-absolute top-50 start-50 translate-middle bg-white px-3 mb-0">
+                                        ATAU
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="d-grid">
+                                    <a href="{{ route('auth.login') }}" class="btn btn-outline-dark radius-30">
+                                        <i class='bx bx-log-in-circle me-1'></i>
+                                        Login dengan SSO
+                                    </a>
+                                </div>
                             </div>
 
                         </form>

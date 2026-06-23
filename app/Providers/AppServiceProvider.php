@@ -5,7 +5,10 @@ namespace App\Providers;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
 use App\Models\Pengaturan;
+use Illuminate\Support\Facades\Event;
 use Laravel\Passport\Passport;
+use SocialiteProviders\Keycloak\KeycloakExtendSocialite;
+use SocialiteProviders\Manager\SocialiteWasCalled;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Event::listen(
+            SocialiteWasCalled::class,
+            KeycloakExtendSocialite::class
+        );
         Carbon::setLocale('id');
 
         // Dynamic app name from settings, fallback to config/app.php value

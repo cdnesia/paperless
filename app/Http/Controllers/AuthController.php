@@ -6,6 +6,7 @@ use App\Models\LoginHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Cache\RateLimiter;
 
 class AuthController extends Controller
@@ -17,7 +18,7 @@ class AuthController extends Controller
 
     public function login(Request $request, RateLimiter $limiter)
     {
-        $key = 'login:'.$request->ip();
+        $key = 'login:' . $request->ip();
 
         if ($limiter->tooManyAttempts($key, 5)) {
             $seconds = $limiter->availableIn($key);
@@ -58,8 +59,7 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $user = Auth::user();
-        
-        // Update login history with logout timestamp
+
         if ($user) {
             LoginHistory::where('user_id', $user->id)
                 ->whereNull('logout_at')
@@ -68,12 +68,29 @@ class AuthController extends Controller
                 ?->update(['logout_at' => now()]);
         }
 
+        $idToken = session('id_token');
+
         Auth::logout();
-        
+        Session::flush();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
-        return redirect('/login');
+
+        // Jika tidak ada id_token (bukan login via Keycloak), redirect ke halaman login biasa
+        if (!$idToken) {
+            return redirect()->route('login');
+        }
+
+        // Logout dari Keycloak
+        $logoutUrl = config('services.keycloak.base_url')
+            . '/realms/'
+            . config('services.keycloak.realms')
+            . '/protocol/openid-connect/logout'
+            . '?post_logout_redirect_uri='
+            . urlencode(url('/'))
+            . '&id_token_hint='
+            . $idToken;
+
+        return redirect($logoutUrl);
     }
 
     /**

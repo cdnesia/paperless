@@ -144,9 +144,17 @@ Route::middleware(['auth'])->prefix('migration')->name('migration.')->group(func
     Route::post('/execute', [App\Http\Controllers\MigrationController::class, 'execute'])->name('execute');
 });
 
-// Route publik: verifikasi via QR scan tanpa login
+// Route publik: verifikasi via QR scan (dengan ID)
 Route::get('/tanda-tangan-digital/verify/{tandaTanganDigital}', [TandaTanganDigitalController::class, 'verify'])
     ->name('tanda-tangan-digital.verify');
+Route::post('/tanda-tangan-digital/verify/{tandaTanganDigital}', [TandaTanganDigitalController::class, 'verifyUpload'])
+    ->name('tanda-tangan-digital.verify-upload');
+
+// Route publik: verifikasi mandiri — upload file saja, tanpa ID
+Route::get('/verifikasi', [TandaTanganDigitalController::class, 'verifyByUpload'])
+    ->name('verifikasi');
+Route::post('/verifikasi', [TandaTanganDigitalController::class, 'verifyByUploadPost'])
+    ->name('verifikasi.post');
 
 // Route publik: serve file dari storage dengan pengecekan keberadaan file
 Route::get('/files/{path}', [App\Http\Controllers\FileController::class, 'serve'])

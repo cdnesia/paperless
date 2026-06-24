@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verifikasi Tanda Tangan Digital | {{ config('app.name') }}</title>
+    <title>Verifikasi Berkas | {{ config('app.name') }}</title>
     <link rel="icon" type="image/png" href="{{ asset('') }}assets/images/favicon.png">
     <link rel="stylesheet" href="{{ asset('') }}assets/libs/flaticon/css/all/all.css">
     <link rel="stylesheet" href="{{ asset('') }}assets/css/styles.css">
@@ -115,44 +115,46 @@
             color: #9ca3af;
             margin-top: 16px;
         }
+        .upload-section {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px dashed #d1d5db;
+            border-radius: 12px;
+            background: #fafafa;
+        }
+        .upload-section h6 {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .upload-section p {
+            margin-bottom: 12px;
+        }
+        .btn-verify {
+            display: block;
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+            background: #0d6efd;
+            color: #fff;
+        }
+        .btn-verify:hover {
+            background: #0b5ed7;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
     <div class="verify-card">
         <div class="verify-header">
-            <h5><i class="fi fi-rr-search me-1"></i> Verifikasi Tanda Tangan Digital</h5>
+            <h5><i class="fi fi-rr-file-check me-1"></i> Verifikasi Berkas</h5>
         </div>
         <div class="verify-body">
-            {{-- Status Verifikasi --}}
-            <div class="text-center mb-4">
-                @if ($mode === 'dual')
-                    @if ($status === 'valid')
-                        <div class="status-badge valid">
-                            <i class="fi fi-rr-check-circle"></i> Dokumen ASLI & Tanda Tangan VALID
-                        </div>
-                    @else
-                        <div class="status-badge invalid">
-                            <i class="fi fi-rr-cross-circle"></i> Dokumen TIDAK VALID — telah dimodifikasi!
-                        </div>
-                    @endif
-                @else
-                    @if ($status === 'valid')
-                        <div class="status-badge valid">
-                            <i class="fi fi-rr-check-circle"></i> BERKAS VALID
-                        </div>
-                    @elseif ($status === 'invalid')
-                        <div class="status-badge invalid">
-                            <i class="fi fi-rr-cross-circle"></i> BERKAS TIDAK VALID
-                        </div>
-                    @else
-                        <div class="status-badge unknown">
-                            <i class="fi fi-rr-question-circle"></i> Tidak dapat diverifikasi (file tidak ditemukan)
-                        </div>
-                    @endif
-                @endif
-            </div>
-
-            {{-- Detail --}}
+            {{-- Detail Surat --}}
             <table class="detail-table">
                 <tr>
                     <td>Nomor Surat</td>
@@ -176,19 +178,41 @@
                 </tr>
             </table>
 
-            {{-- QR Code --}}
-            <div class="d-flex gap-3 mt-4 justify-content-center">
-                @if ($tandaTanganDigital->qr_code)
-                    <div class="text-center">
-                        <small class="text-muted d-block mb-1">QR Code</small>
-                        <img src="{{ Storage::url($tandaTanganDigital->qr_code) }}"
-                             alt="QR Code" style="max-width:120px;">
+            {{-- Upload Berkas untuk Verifikasi --}}
+            <div class="upload-section">
+                <p class="text-muted small">Upload berkas PDF untuk memverifikasi keaslian dokumen.</p>
+                <form action="{{ route('tanda-tangan-digital.verify-upload', $tandaTanganDigital) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="mb-3">
+                        <input type="file" name="file" accept=".pdf" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn-verify">
+                        <i class="fi fi-rr-file-check me-1"></i> Verifikasi
+                    </button>
+                </form>
+
+                {{-- Hasil Verifikasi Upload --}}
+                @if (isset($uploadValid))
+                    <div class="mt-3">
+                        @if ($uploadValid)
+                            <div class="status-badge valid d-block text-center">
+                                <i class="fi fi-rr-check-circle"></i> Berkas ASLI — Tanda Tangan Digital Valid
+                            </div>
+                        @else
+                            <div class="status-badge invalid d-block text-center">
+                                <i class="fi fi-rr-cross-circle"></i> Berkas Tidak Sah — Dokumen Telah Dimodifikasi
+                            </div>
+                        @endif
+                        <div class="hash-text mt-2">
+                            <strong>SHA256 Berkas:</strong><br>{{ $uploadHash }}
+                        </div>
                     </div>
                 @endif
             </div>
 
             <div class="footer-text">
-                Sistem {{ config('app.name') }} — Verifikasi otomatis menggunakan SHA256
+                Diselenggarakan oleh ICT Center UM Jambi &mdash;
+                Verifikasi keaslian menggunakan SHA256
             </div>
         </div>
     </div>

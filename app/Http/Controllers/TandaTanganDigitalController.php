@@ -155,6 +155,13 @@ class TandaTanganDigitalController extends Controller
                         $teksW = $fpdi->GetStringWidth($teks);
                         $fpdi->Text($qrX + ($qrSize - $teksW) / 2, $qrY + $qrSize + 5, $teks);
                     }
+
+                    // Footer: tautan verifikasi keaslian
+                    $fpdi->SetFont('Arial', '', 10);
+                    $fpdi->SetTextColor(100, 100, 100);
+                    $footerText = 'Keaslian dokumen ini dapat diverifikasi di: ' . route('verifikasi');
+                    $fw = $fpdi->GetStringWidth($footerText);
+                    $fpdi->Text(($size['width'] - $fw) / 2, $size['height'] - 12, $footerText);
                 }
             }
 
@@ -167,36 +174,76 @@ class TandaTanganDigitalController extends Controller
     }
 
     /**
-     * Verifikasi keaslian tanda tangan digital.
+     * Halaman verifikasi publik.
      */
     public function verify(TandaTanganDigital $tandaTanganDigital)
     {
-        $hashSekarang = null;
-        $status = 'unknown';
-        $mode = 'final'; // 'dual' = masih punya 2 file, 'final' = hanya 1 file (sudah di-replace)
+        return view('tanda-tangan-digital.verify-public', compact(
+            'tandaTanganDigital'
+        ));
+    }
 
-        // Jika masih ada file_pdf_final (sebelum dikirim), verifikasi dual
-        if ($tandaTanganDigital->file_pdf_final) {
-            $mode = 'dual';
-            $fileFinalPath = Storage::disk('public')->path($tandaTanganDigital->file_pdf_final);
-            if (file_exists($fileFinalPath)) {
-                $hashSekarang = hash_file('sha256', $fileFinalPath);
-                $status = $hashSekarang === $tandaTanganDigital->hash_sha256_final ? 'valid' : 'invalid';
-            }
-        } elseif ($tandaTanganDigital->suratKeluar->file_pdf) {
-            // Setelah dikirim: file sudah di-replace, verifikasi hash_final terhadap file saat ini
-            $filePath = Storage::disk('public')->path($tandaTanganDigital->suratKeluar->file_pdf);
-            if (file_exists($filePath)) {
-                $hashSekarang = hash_file('sha256', $filePath);
-                $status = $hashSekarang === $tandaTanganDigital->hash_sha256_final ? 'valid' : 'invalid';
-            }
+    /**
+     * Verifikasi dengan upload file — user upload PDF lalu dicocokkan hash-nya.
+     */
+    public function verifyUpload(Request $request, TandaTanganDigital $tandaTanganDigital)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:pdf', 'max:10240'],
+        ]);
+
+        $uploadedFile = $request->file('file');
+        $hashUpload = hash_file('sha256', $uploadedFile->getRealPath());
+
+        // Cocokkan dengan hash_final (prioritas) atau hash_original
+        $hashPembanding = $tandaTanganDigital->hash_sha256_final
+            ?? $tandaTanganDigital->hash_sha256_original;
+
+        $uploadValid = $hashUpload === $hashPembanding;
+
+        return view('tanda-tangan-digital.verify-public', [
+            'tandaTanganDigital' => $tandaTanganDigital,
+            'uploadHash'         => $hashUpload,
+            'uploadValid'        => $uploadValid,
+        ]);
+    }
+
+    /**
+     * Halaman verifikasi mandiri — tanpa ID, user tinggal upload file PDF.
+     */
+    public function verifyByUpload()
+    {
+        return view('tanda-tangan-digital.verify-by-upload');
+    }
+
+    /**
+     * Proses verifikasi mandiri: upload PDF → hash → cari di DB → tampilkan hasil.
+     */
+    public function verifyByUploadPost(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:pdf', 'max:10240'],
+        ]);
+
+        $uploadedFile = $request->file('file');
+        $hashUpload = hash_file('sha256', $uploadedFile->getRealPath());
+
+        // Cari tanda tangan digital yang cocok (hash_final atau hash_original)
+        $tandaTanganDigital = TandaTanganDigital::where('hash_sha256_final', $hashUpload)
+            ->orWhere('hash_sha256_original', $hashUpload)
+            ->with('suratKeluar')
+            ->first();
+
+        if (!$tandaTanganDigital) {
+            return back()
+                ->with('hashUpload', $hashUpload)
+                ->with('error', 'Berkas tidak terdaftar dalam sistem. Dokumen ini tidak memiliki tanda tangan digital yang sah.');
         }
 
-        return view('tanda-tangan-digital.verify-public', compact(
-            'tandaTanganDigital',
-            'hashSekarang',
-            'status',
-            'mode'
-        ));
+        return view('tanda-tangan-digital.verify-public', [
+            'tandaTanganDigital' => $tandaTanganDigital,
+            'uploadHash'         => $hashUpload,
+            'uploadValid'        => true,
+        ]);
     }
 }

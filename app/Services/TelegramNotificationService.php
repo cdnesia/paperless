@@ -13,7 +13,7 @@ class TelegramNotificationService
 
     public function __construct()
     {
-        $this->botToken = Pengaturan::dapatkan('telegram_bot_token', env('TELEGRAM_BOT_TOKEN', ''));
+        $this->botToken = config('services.telegram.bot_token', '');
         $this->baseUrl = "https://api.telegram.org/bot{$this->botToken}";
     }
 

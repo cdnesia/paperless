@@ -54,4 +54,8 @@ return [
         'base_url' => env('KEYCLOAK_BASE_URL'),
         'realms' => env('KEYCLOAK_REALM'),
     ],
+
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN', ''),
+    ],
 ];

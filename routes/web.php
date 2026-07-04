@@ -136,15 +136,6 @@ Route::middleware(['auth', 'route.permission', 'password.force'])->group(functio
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });
 
-// Migration routes — only super-admin, tanpa route.permission middleware
-Route::middleware(['auth'])->prefix('migration')->name('migration.')->group(function () {
-    Route::get('/', [App\Http\Controllers\MigrationController::class, 'index'])->name('index');
-    Route::get('/mapping', [App\Http\Controllers\MigrationController::class, 'mapping'])->name('mapping');
-    Route::get('/field-mapping', [App\Http\Controllers\MigrationController::class, 'fieldMapping'])->name('field-mapping');
-    Route::get('/execute', [App\Http\Controllers\MigrationController::class, 'executePage'])->name('execute-page');
-    Route::post('/execute', [App\Http\Controllers\MigrationController::class, 'execute'])->name('execute');
-});
-
 // Route publik: verifikasi via QR scan (dengan ID)
 Route::get('/tanda-tangan-digital/verify/{tandaTanganDigital}', [TandaTanganDigitalController::class, 'verify'])
     ->name('tanda-tangan-digital.verify');

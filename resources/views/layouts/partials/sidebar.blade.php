@@ -91,11 +91,6 @@
                     'icon' => 'fi fi-rr-settings',
                     'route' => 'pengaturan.index',
                 ],
-                [
-                    'title' => 'Migrasi Data',
-                    'icon' => 'fi fi-rr-database',
-                    'route' => 'migration.index',
-                ],
             ],
         ];
     }

@@ -24,6 +24,7 @@
                                     <th>Email</th>
                                     <th>Unit Kerja</th>
                                     <th>Role</th>
+                                    <th>Telegram</th>
                                     <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
@@ -48,6 +49,22 @@
                                             @empty
                                                 <span class="text-muted">-</span>
                                             @endforelse
+                                        </td>
+                                        <td>
+                                            @if ($user->telegram_chat_id)
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <code class="small">{{ $user->telegram_chat_id }}</code>
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-outline-telegram btn-test-telegram"
+                                                        title="Test Kirim Telegram"
+                                                        data-user-id="{{ $user->id }}"
+                                                        data-user-name="{{ $user->name }}">
+                                                        <i class="fi fi-brands-telegram"></i>
+                                                    </button>
+                                                </div>
+                                            @else
+                                                <span class="text-muted small">-</span>
+                                            @endif
                                         </td>
                                         <td>
                                             <div class="d-flex gap-2 justify-content-center">
@@ -89,9 +106,20 @@
 @push('css')
     <link rel="stylesheet" href="{{ asset('') }}assets/libs/datatables/datatables.min.css">
     <style>
-        #dt_UserList thead th:nth-child(6),
-        #dt_UserList tbody td:nth-child(6) {
+        #dt_UserList thead th:nth-child(7),
+        #dt_UserList tbody td:nth-child(7) {
             text-align: center !important;
+        }
+
+        .btn-outline-telegram {
+            color: #24A1DE;
+            border-color: #24A1DE;
+        }
+
+        .btn-outline-telegram:hover {
+            color: #fff;
+            background-color: #24A1DE;
+            border-color: #24A1DE;
         }
     </style>
 @endpush
@@ -177,6 +205,9 @@
                 }, {
                     targets: 4,
                     orderable: false,
+                }, {
+                    targets: 5,
+                    orderable: false,
                 }]
             });
 
@@ -256,5 +287,35 @@
         function updateSelectedCount() {
             // Add action for bulk operations here if needed
         }
+
+        // --- Test Telegram ---
+        $(document).on('click', '.btn-test-telegram', function() {
+            var btn = $(this);
+            var userId = btn.data('user-id');
+            var userName = btn.data('user-name');
+            var icon = btn.find('i');
+
+            btn.prop('disabled', true);
+            icon.removeClass('fi-brands-telegram').addClass('fi fi-rr-spinner fa-spin');
+
+            $.ajax({
+                url: '/users/' + userId + '/test-telegram',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(res) {
+                    showToast('success', res.message);
+                },
+                error: function(xhr) {
+                    var msg = xhr.responseJSON?.message || 'Gagal mengirim test Telegram.';
+                    showToast('error', msg);
+                },
+                complete: function() {
+                    btn.prop('disabled', false);
+                    icon.removeClass('fi-rr-spinner fa-spin').addClass('fi-brands-telegram');
+                }
+            });
+        });
     </script>
 @endpush

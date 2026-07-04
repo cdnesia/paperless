@@ -32,7 +32,17 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label small text-muted fw-semibold">Telegram Chat ID</label>
-                                <p class="fw-bold mb-0">{{ $user->telegram_chat_id ?? '-' }}</p>
+                                <div class="d-flex align-items-center gap-3">
+                                    <p class="fw-bold mb-0">{{ $user->telegram_chat_id ?? '-' }}</p>
+                                    @if ($user->telegram_chat_id)
+                                        <button type="button" id="btn-test-telegram"
+                                            class="btn btn-sm btn-outline-telegram"
+                                            data-user-id="{{ $user->id }}"
+                                            data-user-name="{{ $user->name }}">
+                                            <i class="fi fi-brands-telegram me-1"></i> Test Kirim
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label small text-muted fw-semibold">Tanggal Dibuat</label>
@@ -64,3 +74,49 @@
         </div>
     </div>
 @endsection
+
+@push('css')
+    <style>
+        .btn-outline-telegram {
+            color: #24A1DE;
+            border-color: #24A1DE;
+        }
+
+        .btn-outline-telegram:hover {
+            color: #fff;
+            background-color: #24A1DE;
+            border-color: #24A1DE;
+        }
+    </style>
+@endpush
+
+@push('js')
+    <script>
+        $('#btn-test-telegram').on('click', function() {
+            var btn = $(this);
+            var userId = btn.data('user-id');
+            var userName = btn.data('user-name');
+            var originalHtml = btn.html();
+
+            btn.prop('disabled', true).html('<i class="fi fi-rr-spinner fa-spin me-1"></i> Mengirim...');
+
+            $.ajax({
+                url: '/users/' + userId + '/test-telegram',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(res) {
+                    showToast('success', res.message);
+                },
+                error: function(xhr) {
+                    var msg = xhr.responseJSON?.message || 'Gagal mengirim test Telegram.';
+                    showToast('error', msg);
+                },
+                complete: function() {
+                    btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+        });
+    </script>
+@endpush

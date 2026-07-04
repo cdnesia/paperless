@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\UnitKerja;
 use App\Models\User;
+use App\Services\TelegramNotificationService;
 use Spatie\Permission\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -116,7 +117,48 @@ class UserController extends Controller
             $user->syncRoles([]);
         }
 
-        return redirect()->route('users.show', $user)->with('success', 'User berhasil diperbarui');
+        return redirect()->route('users.index', $user)->with('success', 'User berhasil diperbarui');
+    }
+
+    /**
+     * Test kirim pesan Telegram ke user.
+     */
+    public function testTelegram(User $user)
+    {
+        $chatId = $user->telegram_chat_id;
+
+        if (!$chatId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User ini belum memiliki Telegram Chat ID.',
+            ], 422);
+        }
+
+        $telegram = app(TelegramNotificationService::class);
+        $appName = config('app.name', 'E-Office');
+
+        $result = $telegram->send($chatId, implode("\n", [
+            "✅ <b>Test Notifikasi</b>",
+            "",
+            "Halo <b>{$user->name}</b>,",
+            "",
+            "Ini adalah pesan test dari aplikasi <b>{$appName}</b>.",
+            "Notifikasi Telegram berfungsi dengan baik!",
+            "",
+            "📅 " . now()->translatedFormat('d F Y H:i'),
+        ]));
+
+        if ($result) {
+            return response()->json([
+                'success' => true,
+                'message' => "Pesan test berhasil dikirim ke {$user->name}.",
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Gagal mengirim pesan. Pastikan Bot Token sudah dikonfigurasi.',
+        ], 500);
     }
 
     public function destroy(User $user)

@@ -146,7 +146,13 @@ class UserController extends Controller
             "Notifikasi Telegram berfungsi dengan baik!",
             "",
             "📅 " . now()->translatedFormat('d F Y H:i'),
-        ]));
+        ]), [
+            'inline_keyboard' => [
+                [
+                    ['text' => 'Buka E-Office 🌐', 'url' => 'https://eoffice.umjambi.ac.id'],
+                ],
+            ],
+        ]);
 
         if ($result) {
             return response()->json([
@@ -172,4 +178,3 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'User berhasil dihapus');
     }
 }
-

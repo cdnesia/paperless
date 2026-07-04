@@ -144,7 +144,8 @@ class DisposisiController extends Controller
                 $surat->nomor_surat ?? '-',
                 $surat->perihal ?? '',
                 $user->name,
-                $validated['keterangan'] ?? $disposisi->keterangan ?? ''
+                $validated['keterangan'] ?? $disposisi->keterangan ?? '',
+                $user->name
             );
         }
 
@@ -333,7 +334,8 @@ class DisposisiController extends Controller
                         $surat->nomor_surat ?? '-',
                         $surat->perihal ?? '',
                         $user->name,
-                        $validated['alasan'] ?? $disposisi->keterangan ?? ''
+                        $validated['alasan'] ?? $disposisi->keterangan ?? '',
+                        $user->name
                     );
                 }
             }

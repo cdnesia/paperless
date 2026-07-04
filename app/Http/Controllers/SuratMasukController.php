@@ -185,7 +185,8 @@ class SuratMasukController extends Controller
                         $suratKeluar->nomor_surat ?? '-',
                         $suratKeluar->perihal,
                         $user->name,
-                        $validated['alasan'] ?? 'Diteruskan'
+                        $validated['alasan'] ?? 'Diteruskan',
+                        $user->name
                     );
                 }
             }

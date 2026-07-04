@@ -20,7 +20,7 @@ class TelegramNotificationService
     /**
      * Send notification to a single user.
      */
-    public function send(int|string $chatId, string $message): bool
+    public function send(int|string $chatId, string $message, array $replyMarkup = []): bool
     {
         if (empty($this->botToken)) {
             Log::warning('Telegram: Bot token not configured.');
@@ -32,12 +32,19 @@ class TelegramNotificationService
         }
 
         try {
-            $response = Http::timeout(10)->post("{$this->baseUrl}/sendMessage", [
+            $payload = [
                 'chat_id' => $chatId,
                 'text' => $message,
                 'parse_mode' => 'HTML',
                 'disable_web_page_preview' => true,
-            ]);
+            ];
+
+            // Tambahkan reply_markup (tombol) jika ada
+            if (!empty($replyMarkup)) {
+                $payload['reply_markup'] = json_encode($replyMarkup);
+            }
+
+            $response = Http::timeout(10)->post("{$this->baseUrl}/sendMessage", $payload);
 
             if (!$response->successful()) {
                 Log::warning('Telegram send failed', [
@@ -57,7 +64,7 @@ class TelegramNotificationService
     /**
      * Notify user about new incoming letter (surat masuk).
      */
-    public function notifySuratMasuk($user, string $nomorSurat, string $perihal, string $pengirim): bool
+    public function notifySuratMasuk($user, string $nomorSurat, string $perihal, string $pengirim, string $url = 'https://eoffice.umjambi.ac.id'): bool
     {
         $chatId = $user->telegram_chat_id ?? null;
         if (!$chatId) return false;
@@ -73,13 +80,24 @@ class TelegramNotificationService
             '{pengirim}' => $pengirim,
         ]);
 
-        return $this->send($chatId, $msg);
+        $replyMarkup = [];
+        if (!empty($url)) {
+            $replyMarkup = [
+                'inline_keyboard' => [
+                    [
+                        ['text' => 'Buka Surat 📥', 'url' => $url]
+                    ]
+                ]
+            ];
+        }
+
+        return $this->send($chatId, $msg, $replyMarkup);
     }
 
     /**
      * Notify user about new disposition (disposisi masuk).
      */
-    public function notifyDisposisiMasuk($user, string $nomorSurat, string $perihal, string $pengirim, string $keterangan = ''): bool
+    public function notifyDisposisiMasuk($user, string $nomorSurat, string $perihal, string $pengirim, string $keterangan = '', string $pendisposisi = '', string $url = 'https://eoffice.umjambi.ac.id'): bool
     {
         $chatId = $user->telegram_chat_id ?? null;
         if (!$chatId) return false;
@@ -94,9 +112,21 @@ class TelegramNotificationService
             '{perihal}' => $perihal,
             '{pengirim}' => $pengirim,
             '{keterangan}' => $keterangan ?: '(tanpa keterangan)',
+            '{pendisposisi}' => $pendisposisi ?: '(tidak diketahui)',
         ]);
 
-        return $this->send($chatId, $msg);
+        $replyMarkup = [];
+        if (!empty($url)) {
+            $replyMarkup = [
+                'inline_keyboard' => [
+                    [
+                        ['text' => 'Buka Surat 📥', 'url' => $url]
+                    ]
+                ]
+            ];
+        }
+
+        return $this->send($chatId, $msg, $replyMarkup);
     }
 
     private function renderTemplate(string $template, array $replacements): string
@@ -131,6 +161,7 @@ class TelegramNotificationService
             "📄 <b>{perihal}</b>",
             "🔢 No. Surat: {nomor}",
             "👤 Dari: {pengirim}",
+            "✍️ Pendisposisi: {pendisposisi}",
             "📝 Keterangan: {keterangan}",
             "",
             "Silakan buka aplikasi " . Pengaturan::dapatkan('app_nama', 'E-Office') . " untuk menindaklanjuti.",

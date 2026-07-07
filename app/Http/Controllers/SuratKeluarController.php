@@ -54,15 +54,23 @@ class SuratKeluarController extends Controller
         return $errors;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::guard('web')->user();
+        $isSuperAdmin = $user->hasRole('super-admin');
+
+        // Filter: 'semua' = semua surat, 'sendiri' = surat akun sendiri
+        $filter = $request->query('filter', $isSuperAdmin ? 'semua' : 'sendiri');
+
         $suratKeluars = SuratKeluar::query()
             ->with('penerima')
-            ->when(!$user->hasRole('super-admin'), function ($q) use ($user) {
+            ->when(!$isSuperAdmin || $filter === 'sendiri', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
-            })->get();
-        return view('surat-keluar.index', compact('suratKeluars'));
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('surat-keluar.index', compact('suratKeluars', 'filter'));
     }
 
     public function create()

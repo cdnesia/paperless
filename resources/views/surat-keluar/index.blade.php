@@ -16,6 +16,18 @@
                     <div class="card-header d-flex gap-3 flex-wrap align-items-center justify-content-between border-0 pb-2">
                         <h6 class="card-title mb-0">Daftar Surat Keluar</h6>
                         <div class="d-flex gap-2 flex-wrap align-items-center">
+                            @if(auth()->user()->hasRole('super-admin'))
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ route('surat-keluar.index', ['filter' => 'semua']) }}"
+                                    class="btn {{ $filter === 'semua' ? 'btn-primary' : 'btn-outline-primary' }}">
+                                    Semua Surat
+                                </a>
+                                <a href="{{ route('surat-keluar.index', ['filter' => 'sendiri']) }}"
+                                    class="btn {{ $filter === 'sendiri' ? 'btn-primary' : 'btn-outline-primary' }}">
+                                    Surat Saya
+                                </a>
+                            </div>
+                            @endif
                             <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#modalPilihMetode">
                                 <i class="fi fi-rr-plus me-1"></i> Tambah Surat Baru

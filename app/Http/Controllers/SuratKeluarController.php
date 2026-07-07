@@ -59,8 +59,8 @@ class SuratKeluarController extends Controller
         $user = Auth::guard('web')->user();
         $isSuperAdmin = $user->hasRole('super-admin');
 
-        // Filter: 'semua' = semua surat, 'sendiri' = surat akun sendiri
-        $filter = $request->query('filter', $isSuperAdmin ? 'semua' : 'sendiri');
+        // Filter: 'semua' = semua surat, 'sendiri' = surat akun sendiri (default)
+        $filter = $request->query('filter', 'sendiri');
 
         $suratKeluars = SuratKeluar::query()
             ->with('penerima')

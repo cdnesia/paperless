@@ -40,6 +40,8 @@ Route::middleware(['auth', 'route.permission', 'password.force'])->group(functio
         Route::patch('/{suratKeluar}/mark-as-read', [SuratMasukController::class, 'markAsRead'])->name('mark-as-read');
         Route::patch('/{suratKeluar}/mark-as-unread', [SuratMasukController::class, 'markAsUnread'])->name('mark-as-unread');
         Route::patch('/{suratKeluar}/update-status', [SuratMasukController::class, 'updateStatus'])->name('update-status');
+        Route::patch('/{suratKeluar}/terima', [SuratMasukController::class, 'terima'])->name('terima');
+        Route::patch('/{suratKeluar}/tolak', [SuratMasukController::class, 'tolak'])->name('tolak');
     });
 
     Route::prefix('surat-keluar')->name('surat-keluar.')->group(function () {
@@ -74,6 +76,8 @@ Route::middleware(['auth', 'route.permission', 'password.force'])->group(functio
         Route::patch('/{disposisi}/mark-as-read', [DisposisiController::class, 'markAsReadMasuk'])->name('mark-as-read');
         Route::patch('/{disposisi}/mark-as-unread', [DisposisiController::class, 'markAsUnreadMasuk'])->name('mark-as-unread');
         Route::patch('/{disposisi}/update-status', [DisposisiController::class, 'updateStatus'])->name('update-status');
+        Route::patch('/{disposisi}/terima', [DisposisiController::class, 'terimaMasuk'])->name('terima');
+        Route::patch('/{disposisi}/tolak', [DisposisiController::class, 'tolakMasuk'])->name('tolak');
     });
 
     Route::prefix('roles')->name('roles.')->group(function () {

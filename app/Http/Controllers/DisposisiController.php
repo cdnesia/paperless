@@ -184,6 +184,76 @@ class DisposisiController extends Controller
     }
 
     /**
+     * Terima disposisi masuk — update status menjadi diterima
+     */
+    public function terimaMasuk(Disposisi $disposisi)
+    {
+        $user = auth()->user();
+
+        if ($disposisi->pengguna_id !== $user->id) {
+            abort(403);
+        }
+
+        $disposisi->update([
+            'status' => 'diterima',
+            'alasan' => null,
+            'dibaca' => true,
+        ]);
+
+        // Update pivot surat_keluar_penerima
+        if ($disposisi->surat_keluar_id) {
+            $suratKeluar = $disposisi->suratKeluar;
+            if ($suratKeluar) {
+                $suratKeluar->penerima()->updateExistingPivot($user->id, [
+                    'status' => 'diterima',
+                    'alasan' => null,
+                    'dibaca' => true,
+                    'dibaca_at' => now(),
+                ]);
+            }
+        }
+
+        return back()->with('success', 'Disposisi berhasil diterima');
+    }
+
+    /**
+     * Tolak disposisi masuk — update status menjadi ditolak
+     */
+    public function tolakMasuk(Request $request, Disposisi $disposisi)
+    {
+        $user = auth()->user();
+
+        if ($disposisi->pengguna_id !== $user->id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'alasan' => 'nullable|string|max:500',
+        ]);
+
+        $disposisi->update([
+            'status' => 'ditolak',
+            'alasan' => $validated['alasan'] ?? null,
+            'dibaca' => true,
+        ]);
+
+        // Update pivot surat_keluar_penerima
+        if ($disposisi->surat_keluar_id) {
+            $suratKeluar = $disposisi->suratKeluar;
+            if ($suratKeluar) {
+                $suratKeluar->penerima()->updateExistingPivot($user->id, [
+                    'status' => 'ditolak',
+                    'alasan' => $validated['alasan'] ?? null,
+                    'dibaca' => true,
+                    'dibaca_at' => now(),
+                ]);
+            }
+        }
+
+        return back()->with('success', 'Disposisi berhasil ditolak');
+    }
+
+    /**
      * ════════════════════════════════════════════════════════
      * DISPOSISI KELUAR (Surat keluar yg saya forward ke orang lain)
      * ════════════════════════════════════════════════════════
@@ -286,8 +356,8 @@ class DisposisiController extends Controller
         }
 
         $validated = $request->validate([
-            'aksi' => 'required|in:diteruskan,diterima,ditolak,selesai',
-            'pengguna_id' => 'required_if:aksi,diteruskan|array',
+            'aksi' => 'required|in:diteruskan,diterima,ditolak,disposisi',
+            'pengguna_id' => 'required_if:aksi,diteruskan,disposisi|array',
             'pengguna_id.*' => 'exists:users,id',
             'alasan' => 'nullable|string|max:500',
         ]);
@@ -311,18 +381,19 @@ class DisposisiController extends Controller
             }
         }
 
-        // Jika diteruskan, buat disposisi baru ke user yang dipilih
-        if ($validated['aksi'] === 'diteruskan' && !empty($validated['pengguna_id'])) {
+        // Jika diteruskan/disposisi, buat disposisi baru ke user yang dipilih
+        if (in_array($validated['aksi'], ['diteruskan', 'disposisi']) && !empty($validated['pengguna_id'])) {
             $telegram = app(TelegramNotificationService::class);
             $surat = $disposisi->suratKeluar;
+            $newStatus = $validated['aksi'] === 'disposisi' ? 'disposisi' : 'diteruskan';
             foreach ($validated['pengguna_id'] as $penggunaId) {
                 if ($penggunaId == $user->id) continue;
                 Disposisi::create([
                     'surat_keluar_id' => $disposisi->surat_keluar_id,
                     'pengguna_id' => $penggunaId,
                     'pengirim_id' => $user->id,
-                    'keterangan' => $validated['alasan'] ?? $disposisi->keterangan,
-                    'status' => 'diteruskan',
+                    'keterangan' => $validated['alasan'] ?? null,
+                    'status' => $newStatus,
                     'dibaca' => false,
                 ]);
 
@@ -334,18 +405,23 @@ class DisposisiController extends Controller
                         $surat->nomor_surat ?? '-',
                         $surat->perihal ?? '',
                         $user->name,
-                        $validated['alasan'] ?? $disposisi->keterangan ?? '',
+                        $validated['alasan'] ?? '',
                         $user->name
                     );
                 }
             }
 
             $count = count($validated['pengguna_id']);
+            $verb = $validated['aksi'] === 'disposisi' ? 'didiposisikan' : 'diteruskan';
             return redirect()->route('disposisi-masuk.show', $disposisi)
-                ->with('success', "Disposisi berhasil diteruskan ke {$count} user");
+                ->with('success', "Disposisi berhasil {$verb} ke {$count} user");
         }
 
-        $label = $validated['aksi'] === 'diterima' ? 'diterima' : 'ditolak';
+        $labels = [
+            'diterima' => 'diterima',
+            'ditolak' => 'ditolak',
+        ];
+        $label = $labels[$validated['aksi']] ?? 'diproses';
         return redirect()->route('disposisi-masuk.show', $disposisi)
             ->with('success', "Disposisi berhasil {$label}");
     }

@@ -126,14 +126,14 @@
                         <h6 class="card-title mb-0">
                             <i class="fi fi-rr-share me-1"></i> Riwayat Disposisi
                         </h6>
-                        @if (!in_array($disposisi->status, ['diterima', 'ditolak', 'selesai']))
+                        @if (!in_array($disposisi->status, ['diterima', 'ditolak']))
                             <button type="button" class="btn btn-white btn-sm btn-shadow waves-effect"
                                 data-bs-toggle="collapse" data-bs-target="#formDisposisi">
                                 <i class="fi fi-rr-add"></i> Aksi
                             </button>
                         @else
                             <span
-                                class="badge badge-sm bg-{{ $disposisi->status === 'diterima' || $disposisi->status === 'selesai' ? 'success' : ($disposisi->status === 'ditolak' ? 'danger' : 'info') }} bg-opacity-10 text-dark">
+                                class="badge badge-sm bg-{{ $disposisi->status === 'diterima' || $disposisi->status === 'disposisi' ? 'success' : ($disposisi->status === 'ditolak' ? 'danger' : 'info') }} bg-opacity-10 text-dark">
                                 {{ ucfirst($disposisi->status) }}
                             </span>
                         @endif
@@ -141,7 +141,7 @@
 
                     <div class="collapse" id="formDisposisi">
                         <div class="card-body border-bottom bg-light">
-                            @if (!in_array($disposisi->status, ['diterima', 'ditolak', 'selesai']))
+                            @if (!in_array($disposisi->status, ['diterima', 'ditolak']))
                                 <form action="{{ route('disposisi-masuk.update-status', $disposisi) }}" method="POST" id="formAksiSurat">
                                     @csrf
                                     @method('PATCH')
@@ -149,7 +149,8 @@
                                         <label class="form-label small">Aksi</label>
                                         <select name="aksi" class="form-select form-select-sm select2" id="pilihAksi" required>
                                             <option value="">-- Pilih Aksi --</option>
-                                            <option value="diteruskan">↻ Disposisikan / Teruskan</option>
+                                            <option value="diteruskan">↻ Diteruskan</option>
+                                            <option value="disposisi">📋 Disposisi</option>
                                             <option value="diterima">✓ Terima</option>
                                             <option value="ditolak">✗ Tolak</option>
                                         </select>
@@ -172,9 +173,11 @@
                                 </form>
                             @else
                                 <div class="text-center py-2">
-                                    <span class="badge badge-sm bg-{{ $disposisi->status === 'diterima' || $disposisi->status === 'selesai' ? 'success' : ($disposisi->status === 'ditolak' ? 'danger' : 'info') }} fs-6">
-                                        @if ($disposisi->status === 'diterima' || $disposisi->status === 'selesai')
+                                    <span class="badge badge-sm bg-{{ $disposisi->status === 'diterima' || $disposisi->status === 'disposisi' ? 'success' : ($disposisi->status === 'ditolak' ? 'danger' : 'info') }} fs-6">
+                                        @if ($disposisi->status === 'diterima')
                                             ✓ Surat Diterima
+                                        @elseif ($disposisi->status === 'disposisi')
+                                            ✓ Surat Didiposisikan
                                         @elseif ($disposisi->status === 'ditolak')
                                             ✗ Surat Ditolak
                                         @else
@@ -214,7 +217,7 @@
                                             {{ $item->created_at->translatedFormat('d F Y H:i') }}
                                         </div>
                                         <span
-                                            class="badge badge-sm bg-{{ $item->status === 'selesai' || $item->status === 'diterima' ? 'success' : ($item->status === 'ditolak' ? 'danger' : 'info') }} mb-1">
+                                            class="badge badge-sm bg-{{ $item->status === 'disposisi' || $item->status === 'diterima' ? 'success' : ($item->status === 'ditolak' ? 'danger' : 'info') }} mb-1">
                                             {{ ucfirst($item->status) }}
                                         </span>
                                         @if ($isInvolved && $item->keterangan)
@@ -337,9 +340,14 @@
             // Gunakan jQuery untuk Select2 compatibility
             $('#pilihAksi').on('change', function() {
                 const userWrapper = document.getElementById('pilihUserWrapper');
-                if (this.value === 'diteruskan') {
+                if (this.value === 'diteruskan' || this.value === 'disposisi') {
                     if (userWrapper) userWrapper.style.display = 'block';
                     inputPenerima.required = true;
+                    if (this.value === 'disposisi') {
+                        userWrapper.querySelector('label').textContent = 'Disposisi ke';
+                    } else {
+                        userWrapper.querySelector('label').textContent = 'Teruskan ke';
+                    }
                     setTimeout(function() { inputPenerima.focus(); }, 150);
                 } else {
                     if (userWrapper) userWrapper.style.display = 'none';
@@ -348,14 +356,14 @@
                 }
             });
 
-            // Prevent form submit if diteruskan but no tags
+            // Prevent form submit if diteruskan/disposisi but no tags
             document.getElementById('formAksiSurat')?.addEventListener('submit', function(e) {
                 const aksi = document.getElementById('pilihAksi')?.value;
-                if (aksi === 'diteruskan' && tagify) {
+                if ((aksi === 'diteruskan' || aksi === 'disposisi') && tagify) {
                     const tags = JSON.parse(inputPenerima.value || '[]');
                     if (tags.length === 0) {
                         e.preventDefault();
-                        showToast('warning', 'Pilih minimal satu penerima untuk diteruskan');
+                        showToast('warning', 'Pilih minimal satu penerima');
                     }
                 }
             });

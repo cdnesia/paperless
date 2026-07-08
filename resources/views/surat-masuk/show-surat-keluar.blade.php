@@ -153,7 +153,7 @@
                             </button>
                         @else
                             <span
-                                class="badge badge-sm bg-{{ $pivotStatus === 'diterima' ? 'success' : 'danger' }} bg-opacity-10 text-dark">
+                                class="badge badge-sm bg-{{ $pivotStatus === 'diterima' || $pivotStatus === 'disposisi' ? 'success' : ($pivotStatus === 'ditolak' ? 'danger' : 'info') }} bg-opacity-10 text-dark">
                                 {{ ucfirst($pivotStatus) }}
                             </span>
                         @endif
@@ -170,7 +170,8 @@
                                         <label class="form-label small">Aksi</label>
                                         <select name="aksi" class="form-select form-select-sm select2" id="pilihAksi" required>
                                             <option value="">-- Pilih Aksi --</option>
-                                            <option value="diteruskan">↻ Disposisikan / Teruskan</option>
+                                            <option value="diteruskan">↻ Diteruskan</option>
+                                            <option value="disposisi">📋 Disposisi</option>
                                             <option value="diterima">✓ Terima</option>
                                             <option value="ditolak">✗ Tolak</option>
                                         </select>
@@ -193,11 +194,15 @@
                                 </form>
                             @else
                                 <div class="text-center py-2">
-                                    <span class="badge badge-sm bg-{{ $pivotStatus === 'diterima' ? 'success' : 'danger' }} fs-6">
+                                    <span class="badge badge-sm bg-{{ in_array($pivotStatus, ['diterima', 'disposisi']) ? 'success' : ($pivotStatus === 'ditolak' ? 'danger' : 'info') }} fs-6">
                                         @if ($pivotStatus === 'diterima')
                                             ✓ Surat Diterima
-                                        @else
+                                        @elseif ($pivotStatus === 'disposisi')
+                                            ✓ Surat Didiposisikan
+                                        @elseif ($pivotStatus === 'ditolak')
                                             ✗ Surat Ditolak
+                                        @else
+                                            ↻ Surat Sudah Diteruskan
                                         @endif
                                     </span>
                                 </div>
@@ -230,7 +235,7 @@
                                             <i class="fi fi-rr-calendar me-1"></i> {{ $disposisi->created_at->translatedFormat('d F Y H:i') }}
                                         </div>
 
-                                        <span class="badge badge-sm bg-{{ $disposisi->status === 'selesai' || $disposisi->status === 'diterima' ? 'success' : ($disposisi->status === 'ditolak' ? 'danger' : 'info') }} mb-1">
+                                        <span class="badge badge-sm bg-{{ $disposisi->status === 'disposisi' || $disposisi->status === 'diterima' ? 'success' : ($disposisi->status === 'ditolak' ? 'danger' : 'info') }} mb-1">
                                             {{ ucfirst($disposisi->status) }}
                                         </span>
                                         @if ($isInvolved && $disposisi->keterangan)
@@ -342,9 +347,14 @@
             // Gunakan jQuery untuk Select2 compatibility
             $('#pilihAksi').on('change', function() {
                 const userWrapper = document.getElementById('pilihUserWrapper');
-                if (this.value === 'diteruskan') {
+                if (this.value === 'diteruskan' || this.value === 'disposisi') {
                     if (userWrapper) userWrapper.style.display = 'block';
                     inputPenerima.required = true;
+                    if (this.value === 'disposisi') {
+                        userWrapper.querySelector('label').textContent = 'Disposisi ke';
+                    } else {
+                        userWrapper.querySelector('label').textContent = 'Teruskan ke';
+                    }
                     setTimeout(function() { inputPenerima.focus(); }, 150);
                 } else {
                     if (userWrapper) userWrapper.style.display = 'none';
@@ -355,11 +365,11 @@
 
             document.getElementById('formAksiSurat')?.addEventListener('submit', function(e) {
                 const aksi = document.getElementById('pilihAksi')?.value;
-                if (aksi === 'diteruskan' && tagify) {
+                if ((aksi === 'diteruskan' || aksi === 'disposisi') && tagify) {
                     const tags = JSON.parse(inputPenerima.value || '[]');
                     if (tags.length === 0) {
                         e.preventDefault();
-                        showToast('warning', 'Pilih minimal satu penerima untuk diteruskan');
+                        showToast('warning', 'Pilih minimal satu penerima');
                     }
                 }
             });

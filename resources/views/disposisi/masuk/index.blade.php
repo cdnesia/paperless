@@ -67,7 +67,7 @@
                                         </td>
                                         <td>{{ Str::limit($item->keterangan, 40) ?? '-' }}</td>
                                         <td>
-                                            <span class="badge badge-sm bg-{{ $item->status === 'diteruskan' ? 'info' : ($item->status === 'diterima' || $item->status === 'selesai' ? 'success' : 'danger') }}">
+                                            <span class="badge badge-sm bg-{{ $item->status === 'diteruskan' ? 'info' : ($item->status === 'diterima' || $item->status === 'disposisi' ? 'success' : 'danger') }}">
                                                 {{ ucfirst($item->status) }}
                                             </span>
                                         </td>

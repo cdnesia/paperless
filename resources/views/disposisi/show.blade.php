@@ -107,7 +107,7 @@
                         <h6 class="card-title mb-0">
                             <i class="fi fi-rr-share me-1"></i> Riwayat Disposisi
                         </h6>
-                        <span class="badge badge-sm bg-{{ $disposisi->status === 'selesai' || $disposisi->status === 'diterima' ? 'success' : ($disposisi->status === 'ditolak' ? 'danger' : 'info') }} bg-opacity-10 text-dark">
+                        <span class="badge badge-sm bg-{{ $disposisi->status === 'disposisi' || $disposisi->status === 'diterima' ? 'success' : ($disposisi->status === 'ditolak' ? 'danger' : 'info') }} bg-opacity-10 text-dark">
                             {{ ucfirst($disposisi->status) }}
                         </span>
                     </div>
@@ -140,7 +140,7 @@
                                             {{ $item->created_at->translatedFormat('d F Y H:i') }}
                                         </div>
                                         <span
-                                            class="badge badge-sm bg-{{ $item->status === 'selesai' || $item->status === 'diterima' ? 'success' : ($item->status === 'ditolak' ? 'danger' : 'info') }} mb-1">
+                                            class="badge badge-sm bg-{{ $item->status === 'disposisi' || $item->status === 'diterima' ? 'success' : ($item->status === 'ditolak' ? 'danger' : 'info') }} mb-1">
                                             {{ ucfirst($item->status) }}
                                         </span>
                                         @if ($isInvolved && $item->keterangan)

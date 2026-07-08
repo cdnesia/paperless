@@ -150,8 +150,8 @@ class SuratMasukController extends Controller
         }
 
         $validated = $request->validate([
-            'aksi' => 'required|in:diterima,ditolak,diteruskan',
-            'pengguna_id' => 'required_if:aksi,diteruskan|array',
+            'aksi' => 'required|in:diterima,ditolak,diteruskan,disposisi',
+            'pengguna_id' => 'required_if:aksi,diteruskan,disposisi|array',
             'pengguna_id.*' => 'exists:users,id',
             'alasan' => 'nullable|string|max:500',
         ]);
@@ -164,16 +164,17 @@ class SuratMasukController extends Controller
             'dibaca_at' => now(),
         ]);
 
-        // Jika diteruskan, buat disposisi ke user yang dipilih
-        if ($validated['aksi'] === 'diteruskan') {
+        // Jika diteruskan/disposisi, buat disposisi ke user yang dipilih
+        if (in_array($validated['aksi'], ['diteruskan', 'disposisi'])) {
+            $newStatus = $validated['aksi'] === 'disposisi' ? 'disposisi' : 'diteruskan';
             foreach ($validated['pengguna_id'] as $penggunaId) {
                 Disposisi::firstOrCreate([
                     'surat_keluar_id' => $suratKeluar->id,
                     'pengguna_id' => $penggunaId,
                     'pengirim_id' => $user->id,
                 ], [
-                    'keterangan' => $validated['alasan'] ?? 'Diteruskan',
-                    'status' => 'diteruskan',
+                    'keterangan' => $validated['alasan'] ?? null,
+                    'status' => $newStatus,
                 ]);
 
                 // Notifikasi Telegram ke penerima disposisi
@@ -185,20 +186,73 @@ class SuratMasukController extends Controller
                         $suratKeluar->nomor_surat ?? '-',
                         $suratKeluar->perihal,
                         $user->name,
-                        $validated['alasan'] ?? 'Diteruskan',
+                        $validated['alasan'] ?? '',
                         $user->name
                     );
                 }
             }
 
             $count = count($validated['pengguna_id']);
+            $verb = $validated['aksi'] === 'disposisi' ? 'didiposisikan' : 'diteruskan';
             return redirect()->route('surat-masuk.show', $suratKeluar)
-                ->with('success', "Surat berhasil didisposisikan ke {$count} user");
+                ->with('success', "Surat berhasil {$verb} ke {$count} user");
         }
 
-        $label = $validated['aksi'] === 'diterima' ? 'diterima' : 'ditolak';
+        $labels = [
+            'diterima' => 'diterima',
+            'ditolak' => 'ditolak',
+        ];
+        $label = $labels[$validated['aksi']] ?? 'diproses';
         return redirect()->route('surat-masuk.show', $suratKeluar)
             ->with('success', "Surat berhasil {$label}");
+    }
+
+    /**
+     * Terima surat masuk — update pivot status menjadi diterima
+     */
+    public function terima(SuratKeluar $suratKeluar)
+    {
+        $user = Auth::guard('web')->user();
+
+        $penerima = $suratKeluar->penerima()->where('user_id', $user->id)->first();
+        if (!$penerima) {
+            abort(403, 'Anda tidak memiliki akses ke surat ini');
+        }
+
+        $suratKeluar->penerima()->updateExistingPivot($user->id, [
+            'status' => 'diterima',
+            'alasan' => null,
+            'dibaca' => true,
+            'dibaca_at' => now(),
+        ]);
+
+        return back()->with('success', 'Surat berhasil diterima');
+    }
+
+    /**
+     * Tolak surat masuk — update pivot status menjadi ditolak
+     */
+    public function tolak(Request $request, SuratKeluar $suratKeluar)
+    {
+        $user = Auth::guard('web')->user();
+
+        $penerima = $suratKeluar->penerima()->where('user_id', $user->id)->first();
+        if (!$penerima) {
+            abort(403, 'Anda tidak memiliki akses ke surat ini');
+        }
+
+        $validated = $request->validate([
+            'alasan' => 'nullable|string|max:500',
+        ]);
+
+        $suratKeluar->penerima()->updateExistingPivot($user->id, [
+            'status' => 'ditolak',
+            'alasan' => $validated['alasan'] ?? null,
+            'dibaca' => true,
+            'dibaca_at' => now(),
+        ]);
+
+        return back()->with('success', 'Surat berhasil ditolak');
     }
 
 

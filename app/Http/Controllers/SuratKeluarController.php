@@ -63,7 +63,7 @@ class SuratKeluarController extends Controller
         $filter = $request->query('filter', 'sendiri');
 
         $suratKeluars = SuratKeluar::query()
-            ->with('penerima')
+            ->with(['penerima', 'user'])
             ->when(!$isSuperAdmin || $filter === 'sendiri', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })

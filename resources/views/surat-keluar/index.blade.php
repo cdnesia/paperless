@@ -43,6 +43,9 @@
                                     <th style="width: 40px" class="text-center">#</th>
                                     <th>No. Surat</th>
                                     <th>Perihal</th>
+                                    @if(auth()->user()->hasRole('super-admin'))
+                                    <th>Pengirim</th>
+                                    @endif
                                     <th>Klasifikasi</th>
                                     <th>Tujuan</th>
                                     <th>Status</th>
@@ -59,6 +62,13 @@
                                             </a>
                                         </td>
                                         <td>{{ $surat->perihal }}</td>
+                                        @if(auth()->user()->hasRole('super-admin'))
+                                        <td>
+                                            <span class="badge badge-sm bg-secondary bg-opacity-10 text-dark">
+                                                {{ $surat->user->name ?? '-' }}
+                                            </span>
+                                        </td>
+                                        @endif
                                         <td>
                                             @php
                                                 $jenisBadge = [
@@ -254,8 +264,8 @@
 @push('css')
     <link rel="stylesheet" href="{{ asset('') }}assets/libs/datatables/datatables.min.css">
     <style>
-        #dt_SuratKeluar thead th:nth-child(8),
-        #dt_SuratKeluar tbody td:nth-child(8) {
+        #dt_SuratKeluar thead th:last-child,
+        #dt_SuratKeluar tbody td:last-child {
             text-align: center !important;
         }
     </style>
@@ -339,7 +349,7 @@
                     targets: 0,
                     orderable: false,
                 }, {
-                    targets: 6,
+                    targets: -1,
                     orderable: false,
                 }]
             });

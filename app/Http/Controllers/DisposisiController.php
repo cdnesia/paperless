@@ -129,7 +129,7 @@ class DisposisiController extends Controller
             'surat_keluar_id' => $disposisi->surat_keluar_id,
             'pengguna_id' => $validated['pengguna_id'],
             'pengirim_id' => $user->id,
-            'keterangan' => $validated['keterangan'] ?? $disposisi->keterangan,
+            'keterangan' => $validated['keterangan'] ?? null,
             'status' => 'diteruskan',
             'dibaca' => false,
         ]);
@@ -143,8 +143,8 @@ class DisposisiController extends Controller
                 $penerima,
                 $surat->nomor_surat ?? '-',
                 $surat->perihal ?? '',
-                $user->name,
-                $validated['keterangan'] ?? $disposisi->keterangan ?? '',
+                $surat->user->name ?? 'System',
+                $validated['keterangan'] ?? '',
                 $user->name
             );
         }
@@ -404,7 +404,7 @@ class DisposisiController extends Controller
                         $penerima,
                         $surat->nomor_surat ?? '-',
                         $surat->perihal ?? '',
-                        $user->name,
+                        $surat->user->name ?? 'System',
                         $validated['alasan'] ?? '',
                         $user->name
                     );

@@ -9,7 +9,7 @@ class UnitKerjaController extends Controller
 {
     public function index()
     {
-        $units = UnitKerja::withCount('users')->paginate(15);
+        $units = UnitKerja::withCount('users')->orderBy('nama')->get();
         return view('unit-kerja.index', compact('units'));
     }
 
